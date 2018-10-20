@@ -131,7 +131,7 @@ template <class T> struct Ray {
     dir2.norm();
     return (vec - orig) | dir2;
   }
-  HD Vec3f projpoint(const Vec3<T> &vec) { return *this(proindex(vec)); }
+  HD Vec3f projpoint(const Vec3<T> &vec) { return (*this)(proindex(vec)); }
 
   HD Vec3<T> operator()(T index) { return orig + index * dir; }
 
