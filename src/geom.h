@@ -52,7 +52,7 @@ template <class T> struct Vec2 {
     return o.normalizeeq();
   }
 
-  HD friend std::ostream &operator<<(std::ostream &out, Vec2 v) {
+  friend std::ostream &operator<<(std::ostream &out, Vec2 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
   }
 };
@@ -109,7 +109,7 @@ template <class T> struct Vec3 {
     return o.normalizeeq();
   }
 
-  HD friend std::ostream &operator<<(std::ostream &out, Vec3 v) {
+  friend std::ostream &operator<<(std::ostream &out, Vec3 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
   }
 };
@@ -134,7 +134,7 @@ template <class T> struct Ray {
 
   HD Vec3<T> operator()(T index) { return orig + index * dir; }
 
-  HD friend std::ostream &operator<<(std::ostream &out, Ray v) {
+  friend std::ostream &operator<<(std::ostream &out, Ray v) {
     return out << v.orig << "->" << v.dir;
   }
 };
@@ -183,7 +183,7 @@ template <class T> struct Mat3 {
     return Vec3<T>{r[0] | v, r[1] | v, r[2] | v};
   }
 
-  HD friend std::ostream &operator<<(std::ostream &out, Mat3 v) {
+  friend std::ostream &operator<<(std::ostream &out, Mat3 v) {
     return out << "[" << v.r[0] << "\n " << v.r[1] << "\n" <<  v.r[2] <<"]";
   }
 };
@@ -257,6 +257,8 @@ struct Sphere {
   Vec3f center;
   real radius2;
   Color color;
+  float caca;
+  Sphere() = default;
   HD Sphere(Vec3f center, real radius,Color color)
     : center(center),radius2(radius*radius),color(color){}
   HD real inter(Rayf ray) {

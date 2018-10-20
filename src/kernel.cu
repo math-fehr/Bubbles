@@ -3,7 +3,7 @@
 
 #include "geom.h"
 
-#define THREADS_PER_BLOCK 128
+#define THREADS_PER_BLOCK 256
 #define FOV (51.52f * M_PI / 180.0f)
 
 // The surface where CUDA will write
@@ -41,7 +41,7 @@ __device__ Rayf get_ray(real x_pixel, real y_pixel, real width, real height) {
 /**
  * Entry CUDA kernel. This is the code for one pixel
  */
-__global__ void kernel(int width, int height, int counter) {
+__global__ void kernel(int width, int height, int counter, Sphere* spheres) {
   // pixel coordinates
   int idx = (blockDim.x * blockIdx.x) + threadIdx.x;
   int x_pixel = idx % width;
@@ -49,23 +49,22 @@ __global__ void kernel(int width, int height, int counter) {
 
   Rayf ray = get_ray(x_pixel,y_pixel, width, height);
 
-  Vec3f pos{0.f,0.f,0.f};
-  float radius = 0.75f;
-  Color color{1.f,1.f,1.f};
-  Sphere sphere(pos,radius,color);
-
   RGBA rgbx;
-  if(sphere.inter(ray) < 0) {
-    rgbx.r =0,rgbx.g=0,rgbx.b=0;
-  } else {
-    rgbx.r=255,rgbx.g=255,rgbx.b=255;
+  rgbx.r = 0, rgbx.g=0,rgbx.b=0;
+
+  for(int i = 0; i < 1000 ; ++i) {
+    if(spheres[i].inter(ray) >= 0) {
+      rgbx.r=255,rgbx.g=255,rgbx.b=255;
+    }
   }
 
-  surf2Dwrite(rgbx, surf, x_pixel * sizeof(rgbx), y_pixel, cudaBoundaryModeZero);
+  if(idx < height * width) {
+    surf2Dwrite(rgbx, surf, x_pixel * sizeof(rgbx), y_pixel, cudaBoundaryModeZero);
+  }
 }
 
 void kernel_launcher(cudaArray_const_t array, const int width,
-                     const int height) {
+                     const int height, Sphere* spheres) {
   // Count the number of frames displayed
   static unsigned counter = 0;
   counter += 1;
@@ -76,6 +75,6 @@ void kernel_launcher(cudaArray_const_t array, const int width,
       (width * height + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
   if (blocks > 0) {
-    kernel<<<blocks, THREADS_PER_BLOCK>>>(width, height, counter);
+    kernel<<<blocks, THREADS_PER_BLOCK>>>(width, height, counter, spheres);
   }
 }
