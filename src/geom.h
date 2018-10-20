@@ -124,12 +124,11 @@ using Vec3f = Vec3<real>;
 //             |___/
 
 template <class T> struct Ray {
-  Vec3<T> orig, dir;
+  Vec3<T> orig, dir; // dir must be normalized
+  HD Ray(Vec3<T> orig, Vec3<T> dir) : orig(orig), dir(dir.normalize()) {}
   HD Ray &normalize() { dir.normalize(); }
   HD T projindex(const Vec3<T> &vec) {
-    auto dir2 = dir;
-    dir2.norm();
-    return (vec - orig) | dir2;
+    return (vec - orig) | dir;
   }
   HD Vec3f projpoint(const Vec3<T> &vec) { return (*this)(proindex(vec)); }
 
@@ -149,7 +148,7 @@ using Rayf = Ray<real>;
 // |_|  |_|\__,_|\__|____/
 
 template <class T> struct Mat3 {
-  Vec3<T> r[3];
+  Vec3<T> r[3]; // row vectors
   HD Mat3 &operator+=(const Mat3 &o) {
     r[0] += o.r[0];
     r[1] += o.r[1];
@@ -247,7 +246,7 @@ struct Color {
   HD friend inline Color operator*(real f, Color v) { return v *= f; }
 
 
-  HD friend std::ostream &operator<<(std::ostream &out, Color c) {
+  friend std::ostream &operator<<(std::ostream &out, Color c) {
     return out << "(" << c.r << ", " << c.g << ", " << c.b <<")";
   }
 
