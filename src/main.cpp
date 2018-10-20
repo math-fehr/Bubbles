@@ -2,6 +2,7 @@
 #include "interop_window.hpp"
 #include "kernel.cuh"
 #include <cuda_gl_interop.h>
+#include "geom.h"
 
 static void show_fps_and_window_size(GLFWwindow *window) {
   // fps counter in static variables
