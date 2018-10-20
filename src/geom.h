@@ -6,7 +6,6 @@
 
 #define HD __host__ __device__
 
-
 using real = float;
 
 // __     __        ____
@@ -98,7 +97,7 @@ template <class T> struct Vec3 {
   HD friend Vec3 operator/(Vec3 v, float f) { return v /= f; }
 
   HD Vec3 operator^(const Vec3 &v) {
-    return Vec3(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
+    return Vec3{y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x};
   }
   HD T operator|(const Vec3 &v) { return x * v.x + y * v.y + z * v.z; }
   HD T norm2() { return *this | *this; }
@@ -127,9 +126,7 @@ template <class T> struct Ray {
   Vec3<T> orig, dir; // dir must be normalized
   HD Ray(Vec3<T> orig, Vec3<T> dir) : orig(orig), dir(dir.normalize()) {}
   HD Ray &normalize() { dir.normalize(); }
-  HD T projindex(const Vec3<T> &vec) {
-    return (vec - orig) | dir;
-  }
+  HD T projindex(const Vec3<T> &vec) { return (vec - orig) | dir; }
   HD Vec3f projpoint(const Vec3<T> &vec) { return (*this)(proindex(vec)); }
 
   HD Vec3<T> operator()(T index) { return orig + index * dir; }
@@ -184,7 +181,7 @@ template <class T> struct Mat3 {
   }
 
   friend std::ostream &operator<<(std::ostream &out, Mat3 v) {
-    return out << "[" << v.r[0] << "\n " << v.r[1] << "\n" <<  v.r[2] <<"]";
+    return out << "[" << v.r[0] << "\n " << v.r[1] << "\n" << v.r[2] << "]";
   }
 };
 
@@ -245,13 +242,10 @@ struct Color {
   HD friend inline Color operator*(Color v, real f) { return v *= f; }
   HD friend inline Color operator*(real f, Color v) { return v *= f; }
 
-
   friend std::ostream &operator<<(std::ostream &out, Color c) {
-    return out << "(" << c.r << ", " << c.g << ", " << c.b <<")";
+    return out << "(" << c.r << ", " << c.g << ", " << c.b << ")";
   }
-
 };
-
 
 struct Sphere {
   Vec3f center;
@@ -259,18 +253,16 @@ struct Sphere {
   Color color;
   float caca;
   Sphere() = default;
-  HD Sphere(Vec3f center, real radius,Color color)
-    : center(center),radius2(radius*radius),color(color){}
+  HD Sphere(Vec3f center, real radius, Color color)
+      : center(center), radius2(radius * radius), color(color) {}
   HD real inter(Rayf ray) {
     real pi = ray.projindex(center);
     Vec3f pn = ray(pi);
     real n2 = (center - pn).norm2();
-    if (n2 > radius2){
+    if (n2 > radius2) {
       return -1;
-    }
-    else{
+    } else {
       return pi - sqrt(radius2 - n2);
     }
   }
 };
-
