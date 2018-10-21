@@ -246,23 +246,3 @@ struct Color {
     return out << "(" << c.r << ", " << c.g << ", " << c.b << ")";
   }
 };
-
-struct Sphere {
-  Vec3f center;
-  real radius2;
-  Color color;
-  float caca;
-  Sphere() = default;
-  HD Sphere(Vec3f center, real radius, Color color)
-      : center(center), radius2(radius * radius), color(color) {}
-  HD real inter(Rayf ray) {
-    real pi = ray.projindex(center);
-    Vec3f pn = ray(pi);
-    real n2 = (center - pn).norm2();
-    if (n2 > radius2) {
-      return -1;
-    } else {
-      return pi - sqrt(radius2 - n2);
-    }
-  }
-};

@@ -2,6 +2,7 @@
 #include "kernel.cuh"
 
 #include "geom.h"
+#include "object.h"
 
 #define THREADS_PER_BLOCK 256
 #define FOV (51.52f * M_PI / 180.0f)
@@ -17,6 +18,15 @@ struct RGBA {
   unsigned a : 8;
 };
 
+__device__ real intersect(Object object, Rayf ray) {
+  if(object.type == ObjectType::sphere) {
+    return object.sphere.inter(ray);
+  } else if(object.type == ObjectType::plane) {
+    return object.plane.inter(ray);
+  } else {
+    return -1.f;
+  }
+}
 
 __device__ Rayf get_ray(real x_pixel, real y_pixel, real width, real height) {
   real scale = tanf(FOV * 0.5f);
@@ -41,7 +51,7 @@ __device__ Rayf get_ray(real x_pixel, real y_pixel, real width, real height) {
 /**
  * Entry CUDA kernel. This is the code for one pixel
  */
-__global__ void kernel(int width, int height, int counter, Sphere* spheres) {
+__global__ void kernel(int width, int height, int counter, Object* objects, unsigned n_objects) {
   // pixel coordinates
   int idx = (blockDim.x * blockIdx.x) + threadIdx.x;
   int x_pixel = idx % width;
@@ -52,19 +62,22 @@ __global__ void kernel(int width, int height, int counter, Sphere* spheres) {
   RGBA rgbx;
   rgbx.r = 0, rgbx.g=0,rgbx.b=0;
 
-  for(int i = 0; i < 1000 ; ++i) {
-    if(spheres[i].inter(ray) >= 0) {
-      rgbx.r=255,rgbx.g=255,rgbx.b=255;
+  for(int i = 0; i < n_objects ; ++i) {
+    if(intersect(objects[i], ray) >= 0.f) {
+      rgbx.r=objects[i].color.r * 255;
+      rgbx.g=objects[i].color.g * 255;
+      rgbx.b=objects[i].color.b * 255;
     }
   }
 
   if(idx < height * width) {
-    surf2Dwrite(rgbx, surf, x_pixel * sizeof(rgbx), y_pixel, cudaBoundaryModeZero);
+    surf2Dwrite(rgbx, surf, x_pixel * sizeof(rgbx), y_pixel,
+                cudaBoundaryModeZero);
   }
 }
 
 void kernel_launcher(cudaArray_const_t array, const int width,
-                     const int height, Sphere* spheres) {
+                     const int height, Object* objects, unsigned n_objects) {
   // Count the number of frames displayed
   static unsigned counter = 0;
   counter += 1;
@@ -75,6 +88,6 @@ void kernel_launcher(cudaArray_const_t array, const int width,
       (width * height + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
   if (blocks > 0) {
-    kernel<<<blocks, THREADS_PER_BLOCK>>>(width, height, counter, spheres);
+    kernel<<<blocks, THREADS_PER_BLOCK>>>(width, height, counter, objects, n_objects);
   }
 }

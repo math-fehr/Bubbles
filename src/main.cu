@@ -3,6 +3,7 @@
 #include "kernel.cuh"
 #include <cuda_gl_interop.h>
 #include "geom.h"
+#include "object.h"
 
 static void show_fps_and_window_size(GLFWwindow *window) {
   // fps counter in static variables
@@ -33,17 +34,26 @@ static void show_fps_and_window_size(GLFWwindow *window) {
 
 int main(int argc, char *argv[]) {
 
-  std::vector<Sphere> spheres;
-  for(float i = 0.f; i < 99.99f; i+=0.1f) {
+  std::vector<Object> objects;
+  for(float i = 0.f; i < 9.99f; i+=0.1f) {
     Vec3f pos{i - 0.5f, i - 0.5f, i - 0.5f};
     float radius = i*0.1f;
-    Color color{i,i,i};
-    spheres.push_back(Sphere{pos,radius,color});
+    Color color{i/10, i/10, i/10};
+    Object object;
+    object.color = color;
+    object.type = ObjectType::sphere;
+    object.sphere = Sphere{pos,radius};
+    objects.push_back(object);
   }
+  Object object;
+  object.color = Color{1.0f,0.0f,0.0f};
+  object.type = ObjectType::plane;
+  object.plane = Plane(Vec3f{1.0f,0.0f,0.0f}, 100.0f);
+  objects.push_back(object);
 
-  Sphere* d_spheres = nullptr;
-  cuda(Malloc(&d_spheres, sizeof(Sphere) * spheres.size()));
-  cuda(Memcpy(d_spheres, spheres.data(), sizeof(Sphere) * spheres.size(), cudaMemcpyHostToDevice));
+  Object* d_objects = nullptr;
+  cuda(Malloc(&d_objects, sizeof(Object) * objects.size()));
+  cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(), cudaMemcpyHostToDevice));
 
   InteropWindow interop_window(640, 480);
 
@@ -55,7 +65,7 @@ int main(int argc, char *argv[]) {
     unsigned width, height;
     std::tie(width, height) = interop_window.interop_data.get_size();
     kernel_launcher(interop_window.interop_data.get_current_cuda_array(), width,
-                    height, d_spheres);
+                    height, d_objects, objects.size());
 
     // Switch buffers
     interop_window.interop_data.blit_buffer();
