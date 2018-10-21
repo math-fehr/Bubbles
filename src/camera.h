@@ -34,4 +34,10 @@ struct Camera {
     this->fov = fov;
     scale = tanf(fov * 0.5f);
   }
+
+  void move_front(real step) {
+    Rayf ray = get_ray(((float)screen_width + 1.0f) / 2.0f,
+                       (screen_height + 1.0f) / 2.0f);
+    pos = ray(step);
+  }
 };

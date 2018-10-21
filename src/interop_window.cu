@@ -9,14 +9,18 @@ void glfw_error_callback(int error, const char *description) {
 
 void glfw_key_callback(GLFWwindow *window, int key, int scancode, int action,
                        int mods) {
-  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-    glfwSetWindowShouldClose(window, GL_TRUE);
+  InteropWindow* interop =
+    static_cast<InteropWindow *>(glfwGetWindowUserPointer(window));
+  auto it = interop->key_callbacks.find(key);
+  if(it != interop->key_callbacks.end()) {
+    it->second(window,action,mods);
+  }
 }
 
 void glfw_window_size_callback(GLFWwindow *window, int width, int height) {
-  InteropData *const interop =
-      static_cast<InteropData *>(glfwGetWindowUserPointer(window));
-  interop->set_size(width, height);
+  InteropWindow* interop =
+    static_cast<InteropWindow *>(glfwGetWindowUserPointer(window));
+  interop->interop_data.set_size(width, height);
 }
 
 GLFWwindow *glfw_window_create_and_init(unsigned width, unsigned height) {
@@ -53,8 +57,8 @@ GLFWwindow *glfw_window_create_and_init(unsigned width, unsigned height) {
   // Set up GLAD by giving him the OpenGL context
   gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-  // Don't use vsync
-  glfwSwapInterval(0);
+  // Use vsync
+  glfwSwapInterval(1);
 
   // only copy rgb, and ignore alpha value
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
@@ -67,9 +71,14 @@ InteropWindow::InteropWindow(unsigned width, unsigned height)
       interop_data(2) {
   interop_data.set_size(width, height);
 
-  glfwSetWindowUserPointer(window.get(), &interop_data);
+  glfwSetWindowUserPointer(window.get(), this);
   glfwSetKeyCallback(window.get(), glfw_key_callback);
   glfwSetFramebufferSizeCallback(window.get(), glfw_window_size_callback);
+
+  key_callbacks.insert(
+      {GLFW_KEY_ESCAPE, [](GLFWwindow *window, int action, int mods) {
+         if (action == GLFW_PRESS) glfwSetWindowShouldClose(window, GL_TRUE);
+       }});
 }
 
 InteropWindow::~InteropWindow() {

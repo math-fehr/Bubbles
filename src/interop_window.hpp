@@ -4,6 +4,11 @@
 #include "interop.hpp"
 #include <GLFW/glfw3.h>
 #include <memory>
+#include <functional>
+#include <unordered_map>
+
+using KeyCallback =
+    std::function<void(GLFWwindow *window, int action, int mods)>;
 
 /**
  * Custom deleter for GLFWwindow
@@ -29,4 +34,10 @@ public:
 
   // The POD containing resources used by CUDA and OpenGL
   InteropData interop_data;
+
+  /**
+   * The callbacks called when a key is pressed.
+   * The map key is the key of the button pressed as defined by GLFW
+   */
+  std::unordered_map<int, KeyCallback> key_callbacks;
 };
