@@ -90,6 +90,7 @@ template <class T> struct Vec3 {
     z /= f;
     return *this;
   }
+  HD Vec3 operator-() { return Vec3{-x, -y, -z}; }
   HD friend Vec3 operator+(Vec3 v, const Vec3 &v2) { return v += v2; }
   HD friend Vec3 operator-(Vec3 v, const Vec3 &v2) { return v -= v2; }
   HD friend Vec3 operator*(Vec3 v, float f) { return v *= f; }

@@ -18,19 +18,30 @@ struct Sphere {
       return pi - sqrt(radius2 - n2);
     }
   }
+  HD Vec3f normal(Vec3f pos) {
+    return (center - pos).normalize();
+  }
 };
 
+// The plane follows the equation normal_vec | point = constant
 struct Plane {
-  Vec3f normal;
+  Vec3f normal_vec;
   real constant;
   Plane() = default;
-  HD Plane(Vec3f normal, real constant) : normal(normal), constant(constant) {}
+  HD Plane(Vec3f normal_vec, real constant) : normal_vec(normal_vec.normalize()), constant(constant) {}
   HD real inter(Rayf ray) {
-    float dot = ray.dir | normal;
+    float dot = ray.dir | normal_vec;
     if (abs(dot) < 1e-6) {
       return -1;
     }
-    return (constant - (ray.orig | normal)) / dot;
+    return (constant - (ray.orig | normal_vec)) / dot;
+  }
+  HD Vec3f normal(Rayf ray) {
+    if((ray.orig | normal_vec) < 0) {
+      return -normal_vec;
+    } else {
+      return normal_vec;
+    }
   }
 };
 

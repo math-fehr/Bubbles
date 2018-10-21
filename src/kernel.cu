@@ -28,6 +28,15 @@ __device__ real intersect(Object object, Rayf ray) {
   }
 }
 
+__device__ Vec3f normal(Object object, Rayf ray, real intersection_distance) {
+  if(object.type == ObjectType::sphere) {
+    return object.sphere.normal(ray(intersection_distance));
+  } else if(object.type == ObjectType::plane) {
+    return object.plane.normal(ray);
+  } else {
+    return Vec3f{};
+  }
+}
 
 /**
  * Entry CUDA kernel. This is the code for one pixel
@@ -43,13 +52,29 @@ __global__ void kernel(int counter, Object* objects, unsigned n_objects, Camera 
   RGBA rgbx;
   rgbx.r = 0, rgbx.g=0,rgbx.b=0;
 
+  int front_object = -1;
+  real intersection_point = 1.f/0.f;
+
   for(int i = 0; i < n_objects ; ++i) {
-    if(intersect(objects[i], ray) >= 0.f) {
-      rgbx.r=objects[i].color.r * 255;
-      rgbx.g=objects[i].color.g * 255;
-      rgbx.b=objects[i].color.b * 255;
+    float intersection_i = intersect(objects[i], ray);
+    if(intersection_i > 0.f && intersection_i < intersection_point) {
+      intersection_point = intersection_i;
+      front_object = i;
     }
   }
+  Vec3f normal_vec = normal(objects[front_object], ray, intersection_point);
+
+  Color ambiant_light{1.0f,1.0f,1.0f};
+  Color ambiant_color = objects[front_object].color * ambiant_light;
+
+  Color diffuse_light{1.0f, 1.0f, 1.0f};
+  real diffuse_factor = normal_vec | ray.dir;
+  Color diffuse_color = objects[front_object].color * diffuse_light * diffuse_factor;
+
+  Color final_color = ambiant_color * 0.1f + diffuse_color * 0.9f;
+  rgbx.r = final_color.r * 255;
+  rgbx.g = final_color.g * 255;
+  rgbx.b = final_color.b * 255;
 
   if(idx < camera.screen_height * camera.screen_width) {
     surf2Dwrite(rgbx, surf, x_pixel * sizeof(rgbx), y_pixel, cudaBoundaryModeZero);
