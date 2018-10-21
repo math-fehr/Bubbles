@@ -55,17 +55,27 @@ int main(int argc, char *argv[]) {
   cuda(Malloc(&d_objects, sizeof(Object) * objects.size()));
   cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(), cudaMemcpyHostToDevice));
 
-  InteropWindow interop_window(640, 480);
+  unsigned init_width = 640;
+  unsigned init_height = 480;
+
+  Vec3f camera_pos{4.208271f, 8.374532f, 17.932925f};
+  Vec3f camera_to_world_x{0.945519, -0.179534, 0.271593};
+  Vec3f camera_to_world_y{0, 0.834209, 0.551447};
+  Vec3f camera_to_world_z{-0.325569, -0.521403, 0.78876};
+  Mat3f camera_to_world{camera_to_world_x,camera_to_world_y,camera_to_world_z};
+
+  Camera camera{camera_pos, camera_to_world, 51.52f * M_PI / 180.0f, init_width, init_height};
+
+  InteropWindow interop_window(init_width, init_height);
 
   // Main loop
   while (!glfwWindowShouldClose(interop_window.window.get())) {
     show_fps_and_window_size(interop_window.window.get());
 
     // Execute the CUDA code
-    unsigned width, height;
-    std::tie(width, height) = interop_window.interop_data.get_size();
-    kernel_launcher(interop_window.interop_data.get_current_cuda_array(), width,
-                    height, d_objects, objects.size());
+    std::tie(camera.screen_width, camera.screen_height) = interop_window.interop_data.get_size();
+    kernel_launcher(interop_window.interop_data.get_current_cuda_array(),
+                    d_objects, objects.size(), camera);
 
     // Switch buffers
     interop_window.interop_data.blit_buffer();
