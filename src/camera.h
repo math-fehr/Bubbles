@@ -2,20 +2,32 @@
 
 #include "geom.h"
 
-struct Camera {
-  Vec3f pos;
-  Mat3f camera_to_world;
-  real fov;           // The field of view in radians
+class Camera {
+  Vec3f pos;      // position
+  Vec3f basedir;  // direction camera points to
+  Vec3f up;       // world up
+  Vec3f xunit;    // x unit vector in camera plane
+  Vec3f yunit;    // y unit vector in camera plane
+  real lim_angle; // minimal angle between axis and up.
+  real fov;       // The field of view in radians
   real scale;
+public:
   unsigned screen_width;  // The screen width in pixel
   unsigned screen_height; // The screen height in pixel
 
   Camera() = delete;
-  Camera(Vec3f pos, Mat3f camera_to_world, real fov, unsigned screen_width,
+  Camera(Vec3f pos, Vec3f basedir, Vec3f up, real fov, unsigned screen_width,
          unsigned screen_height)
-      : pos(pos), camera_to_world(camera_to_world), fov(fov),
+    : pos(pos), basedir(basedir.normalize()), up(up.normalize()), fov(fov),
         scale(tanf(fov * 0.5f)), screen_width(screen_width),
-        screen_height(screen_height) {}
+        screen_height(screen_height) {
+    update_units();
+  }
+
+  void update_units() {
+    xunit = (basedir ^ up).normalize();
+    yunit = (xunit ^ basedir).normalize();
+  }
 
   HD Rayf get_ray(real x_pixel, real y_pixel) {
     real image_aspect_ratio = (real)screen_width / (real)screen_height;
@@ -24,20 +36,24 @@ struct Camera {
     real y = (1 - 2.0f * ((y_pixel + 0.5f) / (real)screen_height)) * scale /
              image_aspect_ratio;
 
-    Vec3f direction_camera{x,y,-1};
-    Vec3f direction = camera_to_world * direction_camera;
-    Vec3f position = pos;
-    return Rayf(position,direction);
+    // Here x and y are the coordinate in the camera plane (distance one from
+    // pos) with actual 3D world length.
+
+    // Vec3f direction_camera{x, y, -1};
+    // Vec3f direction = camera_to_world * direction_camera;
+    Vec3f dir = basedir + x * xunit + y * yunit;
+    return Rayf(pos, dir);
   }
 
-  HD void set_fov(real fov) {
+  void set_fov(real fov) {
     this->fov = fov;
     scale = tanf(fov * 0.5f);
   }
 
-  void move_front(real step) {
-    Rayf ray = get_ray(((float)screen_width + 1.0f) / 2.0f,
-                       (screen_height + 1.0f) / 2.0f);
-    pos = ray(step);
-  }
+  void move_front(real step) { pos += step * basedir; }
+
+  void move_lat(real step) { pos += step * xunit; }
+
+  void move_up(real step) { pos += step * up; }
+
 };
