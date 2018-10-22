@@ -10,6 +10,8 @@
 using KeyCallback =
     std::function<void(GLFWwindow *window, int action, int mods)>;
 
+using CursorCallback =
+  std::function<void(GLFWwindow *window, double xupd, double yupd)>;
 /**
  * Custom deleter for GLFWwindow
  */
@@ -40,4 +42,5 @@ public:
    * The map key is the key of the button pressed as defined by GLFW
    */
   std::unordered_map<int, KeyCallback> key_callbacks;
+  CursorCallback cursor_callback;
 };

@@ -42,14 +42,11 @@ template <class T> struct Vec2 {
   HD friend Vec2 operator*(float f, Vec2 v) { return v *= f; }
   HD friend Vec2 operator/(Vec2 v, float f) { return v /= f; }
 
-  HD T operator|(const Vec2 &v) { return x * v.x + y * v.y; }
-  HD T norm2() { return *this | *this; }
-  HD T norm() { return sqrt(norm2()); }
-  HD Vec2 normalizeeq() { return *this / norm(); }
-  HD Vec2 normalize() {
-    Vec2 o = *this;
-    return o.normalizeeq();
-  }
+  HD T operator|(const Vec2 &v) const { return x * v.x + y * v.y; }
+  HD T norm2() const { return *this | *this; }
+  HD T norm() const { return sqrt(norm2()); }
+  HD Vec2 &normalize() { return *this /= norm(); }
+  HD Vec2 normalized() const { return *this / norm(); }
 
   friend std::ostream &operator<<(std::ostream &out, Vec2 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -90,24 +87,21 @@ template <class T> struct Vec3 {
     z /= f;
     return *this;
   }
-  HD Vec3 operator-() { return Vec3{-x, -y, -z}; }
+  HD Vec3 operator-() const { return Vec3{-x, -y, -z}; }
   HD friend Vec3 operator+(Vec3 v, const Vec3 &v2) { return v += v2; }
   HD friend Vec3 operator-(Vec3 v, const Vec3 &v2) { return v -= v2; }
   HD friend Vec3 operator*(Vec3 v, float f) { return v *= f; }
   HD friend Vec3 operator*(float f, Vec3 v) { return v *= f; }
   HD friend Vec3 operator/(Vec3 v, float f) { return v /= f; }
 
-  HD Vec3 operator^(const Vec3 &v) {
+  HD Vec3 operator^(const Vec3 &v) const {
     return Vec3{y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x};
   }
-  HD T operator|(const Vec3 &v) { return x * v.x + y * v.y + z * v.z; }
-  HD T norm2() { return *this | *this; }
-  HD T norm() { return sqrt(norm2()); }
-  HD Vec3 normalizeeq() { return *this / norm(); }
-  HD Vec3 normalize() {
-    Vec3 o = *this;
-    return o.normalizeeq();
-  }
+  HD T operator|(const Vec3 &v) const { return x * v.x + y * v.y + z * v.z; }
+  HD T norm2() const { return *this | *this; }
+  HD T norm() const { return sqrt(norm2()); }
+  HD Vec3 &normalize() { return *this /= norm(); }
+  HD Vec3 normalized() const { return *this / norm(); }
 
   friend std::ostream &operator<<(std::ostream &out, Vec3 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -125,12 +119,11 @@ using Vec3f = Vec3<real>;
 
 template <class T> struct Ray {
   Vec3<T> orig, dir; // dir must be normalized
-  HD Ray(Vec3<T> orig, Vec3<T> dir) : orig(orig), dir(dir.normalize()) {}
-  HD Ray &normalize() { dir.normalize(); }
-  HD T projindex(const Vec3<T> &vec) { return (vec - orig) | dir; }
-  HD Vec3f projpoint(const Vec3<T> &vec) { return (*this)(proindex(vec)); }
+  HD Ray(Vec3<T> orig, Vec3<T> dir) : orig(orig), dir(dir.normalized()) {}
+  HD T projindex(const Vec3<T> &vec) const { return (vec - orig) | dir; }
+  HD Vec3f projpoint(const Vec3<T> &vec) const { return (*this)(proindex(vec)); }
 
-  HD Vec3<T> operator()(T index) { return orig + index * dir; }
+  HD Vec3<T> operator()(T index) const { return orig + index * dir; }
 
   friend std::ostream &operator<<(std::ostream &out, Ray v) {
     return out << v.orig << "->" << v.dir;
@@ -177,7 +170,7 @@ template <class T> struct Mat3 {
   HD friend Mat3 operator*(float f, Mat3 v) { return v *= f; }
   HD friend Mat3 operator/(Mat3 v, float f) { return v /= f; }
 
-  HD Vec3<T> operator*(const Vec3<T> &v) {
+  HD Vec3<T> operator*(const Vec3<T> &v) const {
     return Vec3<T>{r[0] | v, r[1] | v, r[2] | v};
   }
 

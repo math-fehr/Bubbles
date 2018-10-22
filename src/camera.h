@@ -11,6 +11,7 @@ class Camera {
   real lim_angle; // minimal angle between axis and up.
   real fov;       // The field of view in radians
   real scale;
+
 public:
   unsigned screen_width;  // The screen width in pixel
   unsigned screen_height; // The screen height in pixel
@@ -18,15 +19,15 @@ public:
   Camera() = delete;
   Camera(Vec3f pos, Vec3f basedir, Vec3f up, real fov, unsigned screen_width,
          unsigned screen_height)
-    : pos(pos), basedir(basedir.normalize()), up(up.normalize()), fov(fov),
+      : pos(pos), basedir(basedir.normalized()), up(up.normalized()), fov(fov),
         scale(tanf(fov * 0.5f)), screen_width(screen_width),
         screen_height(screen_height) {
     update_units();
   }
 
   void update_units() {
-    xunit = (basedir ^ up).normalize();
-    yunit = (xunit ^ basedir).normalize();
+    xunit = (basedir ^ up).normalized();
+    yunit = (xunit ^ basedir).normalized();
   }
 
   HD Rayf get_ray(real x_pixel, real y_pixel) {
@@ -56,4 +57,25 @@ public:
 
   void move_up(real step) { pos += step * up; }
 
+  void rotate_lat(real angle) {
+    // we must have |angle| < pi/2 radians or it will be wrapped by tan.
+    basedir += (basedir ^ up) * tan(angle);
+    basedir.normalize();
+    update_units();
+  }
+
+  void rotate_up(real angle) {
+    Vec3f new_basedir = basedir + tan(angle) * yunit;
+    new_basedir.normalize();
+    real check = xunit | (basedir ^ up);
+    if (check < 0.01) {
+      // need to clamp rotation;
+      Vec3f upd = (basedir ^ up) ^ up;
+      // here basedir + upd is colinear to up
+      upd -= upd.normalized() * 0.01;
+      basedir += upd;
+    } else {
+      basedir = new_basedir;
+    }
+  }
 };

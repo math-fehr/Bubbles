@@ -35,9 +35,9 @@ static void show_fps_and_window_size(GLFWwindow *window) {
 int main(int argc, char *argv[]) {
 
   std::vector<Object> objects;
-  for (float i = 0.f; i < 9.99f; i += 0.1f) {
-    Vec3f pos{i - 5.0f, i - 5.0f, -2.0f};
-    float radius = 0.1f;
+  for (float i = 0.f; i < 99.99f; i += 2.0f) {
+    Vec3f pos{i - 50.0f, i - 50.0f, -2.0f};
+    float radius = 1.f;
     Color color{1.0f, 1.0f, 1.0f};
     Object object;
     object.color = color;
@@ -51,8 +51,8 @@ int main(int argc, char *argv[]) {
   cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(),
               cudaMemcpyHostToDevice));
 
-  unsigned init_width = 640;
-  unsigned init_height = 480;
+  unsigned init_width = 1024;
+  unsigned init_height = 720;
 
   Vec3f camera_pos{0.0f, 0.0f, 20.0f};
   Vec3f camera_dir{0, 0, -1};
@@ -69,29 +69,33 @@ int main(int argc, char *argv[]) {
   InteropWindow interop_window(init_width, init_height);
 
   interop_window.key_callbacks.insert(
-      {GLFW_KEY_UP, [&camera](GLFWwindow *, int action, int mods) {
+      {GLFW_KEY_W, [&camera](GLFWwindow *, int action, int mods) {
          camera.move_front(0.1);
        }});
   interop_window.key_callbacks.insert(
-      {GLFW_KEY_DOWN, [&camera](GLFWwindow *, int action, int mods) {
+      {GLFW_KEY_S, [&camera](GLFWwindow *, int action, int mods) {
          camera.move_front(-0.1);
        }});
   interop_window.key_callbacks.insert(
-      {GLFW_KEY_LEFT, [&camera](GLFWwindow *, int action, int mods) {
+      {GLFW_KEY_A, [&camera](GLFWwindow *, int action, int mods) {
          camera.move_lat(-0.1);
        }});
   interop_window.key_callbacks.insert(
-      {GLFW_KEY_RIGHT, [&camera](GLFWwindow *, int action, int mods) {
+      {GLFW_KEY_D, [&camera](GLFWwindow *, int action, int mods) {
          camera.move_lat(0.1);
        }});
   interop_window.key_callbacks.insert(
-      {GLFW_KEY_PAGE_UP, [&camera](GLFWwindow *, int action, int mods) {
-         camera.move_up(0.1);
-       }});
+      {GLFW_KEY_SPACE,
+       [&camera](GLFWwindow *, int action, int mods) { camera.move_up(0.1); }});
   interop_window.key_callbacks.insert(
-      {GLFW_KEY_PAGE_DOWN, [&camera](GLFWwindow *, int action, int mods) {
+      {GLFW_KEY_LEFT_CONTROL, [&camera](GLFWwindow *, int action, int mods) {
          camera.move_up(-0.1);
        }});
+  interop_window.cursor_callback = [&camera](GLFWwindow *, double xupd,
+                                             double yupd) {
+    camera.rotate_lat(xupd * 0.005);
+    camera.rotate_up(-yupd * 0.005);
+  };
 
   // Main loop
   while (!glfwWindowShouldClose(interop_window.window.get())) {

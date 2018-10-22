@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+using namespace std;
+
 void glfw_error_callback(int error, const char *description) {
   std::cerr << description << std::endl;
 }
@@ -16,6 +18,19 @@ void glfw_key_callback(GLFWwindow *window, int key, int scancode, int action,
     it->second(window,action,mods);
   }
 }
+
+void glfw_mouse_callback(GLFWwindow *window, double xpos, double ypos) {
+  InteropWindow* interop =
+    static_cast<InteropWindow *>(glfwGetWindowUserPointer(window));
+  static double last_xpos = xpos;
+  static double last_ypos = ypos;
+  if(interop->cursor_callback){
+    interop->cursor_callback(window,xpos-last_xpos,ypos-last_ypos);
+  }
+  last_xpos = xpos;
+  last_ypos = ypos;
+}
+
 
 void glfw_window_size_callback(GLFWwindow *window, int width, int height) {
   InteropWindow* interop =
@@ -71,8 +86,10 @@ InteropWindow::InteropWindow(unsigned width, unsigned height)
       interop_data(2) {
   interop_data.set_size(width, height);
 
+  glfwSetInputMode(window.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetWindowUserPointer(window.get(), this);
   glfwSetKeyCallback(window.get(), glfw_key_callback);
+  glfwSetCursorPosCallback(window.get(), glfw_mouse_callback);
   glfwSetFramebufferSizeCallback(window.get(), glfw_window_size_callback);
 
   key_callbacks.insert(
