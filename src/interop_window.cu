@@ -42,7 +42,7 @@ GLFWwindow *glfw_window_create_and_init(unsigned width, unsigned height) {
 
   // Give the gl context version number (the one glad use)
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 
   window = glfwCreateWindow(width, height, "Bubbles", nullptr, nullptr);
 
