@@ -36,13 +36,16 @@ int main(int argc, char *argv[]) {
 
   std::vector<Object> objects;
   for (float i = 0.f; i < 19.99f; i += 2.0f) {
-    Vec3f pos{i - 10.0f, i - 10.0f, -10.0f};
+    /*Vec3f pos{i - 10.0f, i - 10.0f, -10.0f};
     float radius = 1.f;
+    Color color{1.0f, 1.0f, 1.0f};*/
+    Vec3f min_pos{i - 10.0f-1.0f, i - 10.0f-1.0f, -10.0f-1.0f};
+    Vec3f max_pos{i - 10.0f+1.0f, i - 10.0f+1.0f, -10.0f+1.0f};
     Color color{1.0f, 1.0f, 1.0f};
     Object object;
     object.color = color;
-    object.type = ObjectType::sphere;
-    object.sphere = Sphere{pos, radius};
+    object.type = ObjectType::box;
+    object.box = Box{min_pos,max_pos};
     objects.push_back(object);
   }
 

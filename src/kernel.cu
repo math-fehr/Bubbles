@@ -24,6 +24,8 @@ __device__ real intersect(Object object, Rayf ray) {
     return object.sphere.inter(ray);
   } else if(object.type == ObjectType::plane) {
     return object.plane.inter(ray);
+  } else if(object.type == ObjectType::box) {
+    return object.box.inter(ray);
   } else {
     return -1.f;
   }
@@ -34,6 +36,8 @@ __device__ Vec3f normal(Object object, Rayf ray, real intersection_distance) {
     return object.sphere.normal(ray(intersection_distance));
   } else if(object.type == ObjectType::plane) {
     return object.plane.normal(ray);
+  } else if(object.type == ObjectType::box) {
+    return object.box.normal(ray, ray(intersection_distance));
   } else {
     return Vec3f{};
   }
@@ -72,7 +76,9 @@ __device__ Color compute_diffuse_color(Object* objects, unsigned n_objects, Poin
   if(!light_touch) {
     return Color{0.0f,0.0f,0.0f};
   }
-  return objects[intersection.front_object].color * (intersection.normal_point | light_ray.dir) * light.color;
+  real diffusion_factor = intersection.normal_point | light_ray.dir;
+  diffusion_factor = max(0.0f, min(1.0f, diffusion_factor));
+  return objects[intersection.front_object].color * diffusion_factor * light.color;
 }
 
 /**
