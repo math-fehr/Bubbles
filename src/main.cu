@@ -35,8 +35,8 @@ static void show_fps_and_window_size(GLFWwindow *window) {
 int main(int argc, char *argv[]) {
 
   std::vector<Object> objects;
-  for (float i = 0.f; i < 99.99f; i += 2.0f) {
-    Vec3f pos{i - 50.0f, i - 50.0f, -2.0f};
+  for (float i = 0.f; i < 19.99f; i += 2.0f) {
+    Vec3f pos{i - 10.0f, i - 10.0f, -10.0f};
     float radius = 1.f;
     Color color{1.0f, 1.0f, 1.0f};
     Object object;
