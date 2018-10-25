@@ -32,19 +32,35 @@ static void show_fps_and_window_size(GLFWwindow *window) {
   frame_count++;
 }
 
+void add_scene_box(std::vector<Object> &objects) {
+  Object object;
+  Texture texture;
+  texture.type = TextureType::uniform_color;
+  texture.uniform_color.color = Color{1.0f, 1.0f, 1.0f};
+  texture.diffusion_factor = 0.7f;
+  texture.ambiant_factor = 0.3f;
+  Vec3f min_pos = Vec3f{-31.0f, -31.0f, -31.0f};
+  Vec3f max_pos = Vec3f{31.0f, 31.0f, 31.0f};
+  object.texture = texture;
+  object.type = ObjectType::box;
+  object.box = Box(min_pos, max_pos);
+  objects.push_back(object);
+}
+
 int main(int argc, char *argv[]) {
 
   std::vector<Object> objects;
+  add_scene_box(objects);
   for (float i = 0.f; i < 19.99f; i += 2.0f) {
     Vec3f min_pos{i - 10.0f - 1.0f, i - 10.0f - 1.0f, -10.0f - 1.0f};
     Vec3f max_pos{i - 10.0f + 1.0f, i - 10.0f + 1.0f, -10.0f + 1.0f};
     Color color{1.0f, 1.0f, 1.0f};
     Object object;
     Texture texture;
-    texture.type = TextureType::phong;
-    texture.phong.color = color;
-    texture.phong.diffusion_factor = 0.8f;
-    texture.phong.ambiant_factor = 0.1f;
+    texture.type = TextureType::uniform_color;
+    texture.uniform_color.color = color;
+    texture.diffusion_factor = 0.8f;
+    texture.ambiant_factor = 0.1f;
     object.texture = texture;
     object.type = ObjectType::box;
     object.box = Box{min_pos, max_pos};
@@ -104,16 +120,19 @@ int main(int argc, char *argv[]) {
     // Execute the CUDA code
     std::tie(camera.screen_width, camera.screen_height) =
         interop_window.interop_data.get_size();
+
     kernel_launcher(interop_window.interop_data.get_current_cuda_array(),
                     d_objects, objects.size(), camera);
+
+    // Get events
+    glfwPollEvents();
+
+    cuda(DeviceSynchronize());
 
     // Switch buffers
     interop_window.interop_data.blit_buffer();
     interop_window.interop_data.change_buffer();
     glfwSwapBuffers(interop_window.window.get());
-
-    // Get events
-    glfwPollEvents();
   }
 
   exit(EXIT_SUCCESS);

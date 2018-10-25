@@ -19,30 +19,6 @@ struct RGBA {
   unsigned a : 8;
 };
 
-__device__ real intersect(Object object, Rayf ray) {
-  if (object.type == ObjectType::sphere) {
-    return object.sphere.inter(ray);
-  } else if (object.type == ObjectType::plane) {
-    return object.plane.inter(ray);
-  } else if (object.type == ObjectType::box) {
-    return object.box.inter(ray);
-  } else {
-    return -1.f;
-  }
-}
-
-__device__ Vec3f normal(Object object, Rayf ray, real intersection_distance) {
-  if (object.type == ObjectType::sphere) {
-    return object.sphere.normal(ray(intersection_distance));
-  } else if (object.type == ObjectType::plane) {
-    return object.plane.normal(ray);
-  } else if (object.type == ObjectType::box) {
-    return object.box.normal(ray, ray(intersection_distance));
-  } else {
-    return Vec3f{};
-  }
-}
-
 struct Intersection {
   int object_id;
   Object object;
@@ -57,7 +33,7 @@ __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
   real intersection_point = 1.f / 0.f;
 
   for (int i = 0; i < n_objects; ++i) {
-    float intersection_i = intersect(objects[i], ray);
+    float intersection_i = objects[i].intersect(ray);
     if (intersection_i > 0.f && intersection_i < intersection_point) {
       intersection_point = intersection_i;
       front_object = i;
@@ -66,17 +42,17 @@ __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
 
   return Intersection{front_object, objects[front_object], intersection_point,
                       ray(intersection_point),
-                      normal(objects[front_object], ray, intersection_point)};
+                      objects[front_object].normal(ray, intersection_point)};
 }
 
 __device__ Color compute_phong_color(Object *objects, unsigned n_objects,
                                      PointLight light,
                                      AmbiantLight ambiant_light,
                                      Intersection intersection) {
-
-  Color ambiant_color = intersection.object.texture.phong.color *
-                        ambiant_light.color *
-                        intersection.object.texture.phong.ambiant_factor;
+  Vec2f uv = intersection.object.uv(intersection.point);
+  Color point_color = intersection.object.texture.get_color(uv);
+  Color ambiant_color = point_color * ambiant_light.color *
+                        intersection.object.texture.ambiant_factor;
 
   Rayf light_ray = light.ray_to_point(intersection.point);
   Intersection light_intersection =
@@ -87,11 +63,11 @@ __device__ Color compute_phong_color(Object *objects, unsigned n_objects,
   if (!light_touch) {
     return ambiant_color;
   }
-  real diffusion_factor = intersection.normal | light_ray.dir;
+  real diffusion_factor = -intersection.normal | light_ray.dir;
   diffusion_factor = max(0.0f, min(1.0f, diffusion_factor));
-  diffusion_factor *= intersection.object.texture.phong.diffusion_factor;
-  Color diffuse_color =
-      intersection.object.texture.phong.color * diffusion_factor * light.color;
+  diffusion_factor *= intersection.object.texture.diffusion_factor;
+  Color diffuse_color = intersection.object.texture.uniform_color.color *
+                        diffusion_factor * light.color;
   return diffuse_color + ambiant_color;
 }
 
@@ -99,7 +75,7 @@ __device__ Color compute_texture(Object *objects, unsigned n_objects,
                                  PointLight light, AmbiantLight ambiant_light,
                                  Intersection intersection) {
   switch (intersection.object.texture.type) {
-  case TextureType::phong:
+  case TextureType::uniform_color:
     return compute_phong_color(objects, n_objects, light, ambiant_light,
                                intersection);
   }
@@ -112,7 +88,7 @@ __device__ Color compute_texture(Object *objects, unsigned n_objects,
 __global__ void kernel(int counter, Object *objects, unsigned n_objects,
                        Camera camera) {
   PointLight light{Vec3f{-30.0f, 0.0f, 0.0f}, Color{1, 1, 1}};
-  AmbiantLight ambiant_light{Color{1.0f, 1.0f, 1.0f}};
+  AmbiantLight ambiant_light{1.0f, 1.0f, 1.0f};
 
   // pixel coordinates
   int idx = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -127,7 +103,7 @@ __global__ void kernel(int counter, Object *objects, unsigned n_objects,
   Intersection intersection = intersect_all(objects, n_objects, ray);
   Rayf light_ray = light.ray_to_point(intersection.point);
 
-  Vec3f normal_vec = normal(intersection.object, ray, intersection.distance);
+  Vec3f normal_vec = intersection.object.normal(ray, intersection.distance);
 
   Color color = compute_phong_color(objects, n_objects, light, ambiant_light,
                                     intersection);

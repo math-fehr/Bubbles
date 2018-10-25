@@ -89,19 +89,37 @@ struct Box {
     return tmin;
   }
   HD Vec3f normal(Rayf ray, Vec3f pos) {
-    if (ray.sign[0] && abs(pos.x - bounds[0].x) < 1e-3)
-      return Vec3f{1.0f, 0.0f, 0.0f};
-    if (!ray.sign[0] && abs(pos.x - bounds[1].x) < 1e-3)
+    int is_interior = (bounds[0].x <= pos.x and pos.x <= bounds[1].x and
+                       bounds[0].y <= pos.y and pos.y <= bounds[1].y and
+                       bounds[0].z <= pos.z and pos.z <= bounds[1].z)
+                          ? 1
+                          : 0;
+    if (ray.sign[0] && abs(pos.x - bounds[is_interior].x) < 1e-3)
       return Vec3f{-1.0f, 0.0f, 0.0f};
-    if (ray.sign[1] && abs(pos.y - bounds[0].y) < 1e-3)
-      return Vec3f{0.0f, 1.0f, 0.0f};
-    if (!ray.sign[1] && abs(pos.y - bounds[1].y) < 1e-3)
+    if (!ray.sign[0] && abs(pos.x - bounds[1 - is_interior].x) < 1e-3)
+      return Vec3f{1.0f, 0.0f, 0.0f};
+    if (ray.sign[1] && abs(pos.y - bounds[is_interior].y) < 1e-3)
       return Vec3f{0.0f, -1.0f, 0.0f};
-    if (ray.sign[2] && abs(pos.z - bounds[0].z) < 1e-3)
-      return Vec3f{0.0f, 0.0f, 1.0f};
-    if (!ray.sign[2] && abs(pos.z - bounds[1].z) < 1e-3)
+    if (!ray.sign[1] && abs(pos.y - bounds[1 - is_interior].y) < 1e-3)
+      return Vec3f{0.0f, 1.0f, 0.0f};
+    if (ray.sign[2] && abs(pos.z - bounds[is_interior].z) < 1e-3)
       return Vec3f{0.0f, 0.0f, -1.0f};
-    return Vec3f{1.0f, 1.0f, 1.0f};
+    if (!ray.sign[2] && abs(pos.z - bounds[1 - is_interior].z) < 1e-3)
+      return Vec3f{0.0f, 0.0f, 1.0f};
+    return Vec3f{1, 0, 0};
+  }
+
+  HD Vec2f uv(Vec3f pos) {
+    float x_uv = (bounds[0].x - pos.x) / (bounds[0].x - bounds[0].x);
+    float y_uv = (bounds[0].y - pos.y) / (bounds[0].y - bounds[0].y);
+    float z_uv = (bounds[0].z - pos.z) / (bounds[0].z - bounds[0].z);
+    if (abs(pos.x - bounds[0].x) < 1e-3) return Vec2f{y_uv, z_uv};
+    if (abs(pos.x - bounds[1].x) < 1e-3) return Vec2f{y_uv, z_uv};
+    if (abs(pos.y - bounds[0].y) < 1e-3) return Vec2f{x_uv, z_uv};
+    if (abs(pos.y - bounds[1].y) < 1e-3) return Vec2f{x_uv, z_uv};
+    if (abs(pos.z - bounds[0].z) < 1e-3) return Vec2f{x_uv, y_uv};
+    if (abs(pos.z - bounds[1].z) < 1e-3) return Vec2f{x_uv, y_uv};
+    return Vec2f{0.0f, 0.0f};
   }
 };
 
@@ -115,4 +133,39 @@ struct Object {
     Plane plane;
     Box box;
   };
+
+  HD real intersect(Rayf ray) {
+    switch (type) {
+    case ObjectType::sphere:
+      return sphere.inter(ray);
+    case ObjectType::plane:
+      return plane.inter(ray);
+    case ObjectType::box:
+      return box.inter(ray);
+    default:
+      return -1.0f;
+    }
+  }
+
+  HD Vec3f normal(Rayf ray, real intersection_distance) {
+    switch (type) {
+    case ObjectType::sphere:
+      return sphere.normal(ray(intersection_distance));
+    case ObjectType::plane:
+      return plane.normal(ray);
+    case ObjectType::box:
+      return box.normal(ray, ray(intersection_distance));
+    default:
+      return {0.0f, 0.0f, 0.0f};
+    }
+  }
+
+  HD Vec2f uv(Vec3f intersection_point) {
+    switch (type) {
+    case ObjectType::box:
+      return box.uv(intersection_point);
+    default:
+      return Vec2f{0.0f, 0.0f};
+    }
+  }
 };

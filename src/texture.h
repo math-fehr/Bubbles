@@ -1,16 +1,32 @@
 #pragma once
 
-enum class TextureType { phong };
+#include "geom.h"
 
-struct Phong {
+struct UniformColor {
   Color color;
-  float ambiant_factor;
-  float diffusion_factor;
 };
+
+struct CheckBoard {
+  Color color1, color2;
+  float n_subdivision;
+};
+
+enum class TextureType { uniform_color, checkerboard };
 
 struct Texture {
   TextureType type;
+  real ambiant_factor;
+  real diffusion_factor;
   union {
-    Phong phong;
+    UniformColor uniform_color;
   };
+
+  HD Color get_color(Vec2f uv) {
+    switch (type) {
+    case TextureType::uniform_color:
+      return uniform_color.color;
+    default:
+      return Color{0.0f, 0.0f, 0.0f};
+    }
+  }
 };
