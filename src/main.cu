@@ -36,16 +36,18 @@ int main(int argc, char *argv[]) {
 
   std::vector<Object> objects;
   for (float i = 0.f; i < 19.99f; i += 2.0f) {
-    /*Vec3f pos{i - 10.0f, i - 10.0f, -10.0f};
-    float radius = 1.f;
-    Color color{1.0f, 1.0f, 1.0f};*/
-    Vec3f min_pos{i - 10.0f-1.0f, i - 10.0f-1.0f, -10.0f-1.0f};
-    Vec3f max_pos{i - 10.0f+1.0f, i - 10.0f+1.0f, -10.0f+1.0f};
+    Vec3f min_pos{i - 10.0f - 1.0f, i - 10.0f - 1.0f, -10.0f - 1.0f};
+    Vec3f max_pos{i - 10.0f + 1.0f, i - 10.0f + 1.0f, -10.0f + 1.0f};
     Color color{1.0f, 1.0f, 1.0f};
     Object object;
-    object.color = color;
+    Texture texture;
+    texture.type = TextureType::phong;
+    texture.phong.color = color;
+    texture.phong.diffusion_factor = 0.8f;
+    texture.phong.ambiant_factor = 0.1f;
+    object.texture = texture;
     object.type = ObjectType::box;
-    object.box = Box{min_pos,max_pos};
+    object.box = Box{min_pos, max_pos};
     objects.push_back(object);
   }
 
@@ -60,11 +62,6 @@ int main(int argc, char *argv[]) {
   Vec3f camera_pos{0.0f, 0.0f, 20.0f};
   Vec3f camera_dir{0, 0, -1};
   Vec3f camera_up{0, 1, 0};
-  // Vec3f camera_to_world_x{1.0f, 0.0f, 0.0f};
-  // Vec3f camera_to_world_y{0.0f, 1.0f, 0.0f};
-  // Vec3f camera_to_world_z{0.0f, 0.0f, 1.0f};
-  // Mat3f
-  // camera_to_world{camera_to_world_x,camera_to_world_y,camera_to_world_z};
 
   Camera camera(camera_pos, camera_dir, camera_up, 51.52f * M_PI / 180.0f,
                 init_width, init_height);

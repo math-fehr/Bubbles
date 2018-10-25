@@ -1,6 +1,7 @@
 #pragma once
 
 #include "geom.h"
+#include "texture.h"
 
 struct Sphere {
   Vec3f center;
@@ -48,40 +49,38 @@ struct Box {
   Vec3f bounds[2];
   Box() = default;
   Box(Vec3f a, Vec3f b) {
-    Vec3f mini,maxi;
-    mini.x = min(a.x,b.x);
-    maxi.x = max(a.x,b.x);
-    mini.y = min(a.y,b.y);
-    maxi.y = max(a.y,b.y);
-    mini.z = min(a.z,b.z);
-    maxi.z = max(a.z,b.z);
+    Vec3f mini, maxi;
+    mini.x = min(a.x, b.x);
+    maxi.x = max(a.x, b.x);
+    mini.y = min(a.y, b.y);
+    maxi.y = max(a.y, b.y);
+    mini.z = min(a.z, b.z);
+    maxi.z = max(a.z, b.z);
     bounds[0] = mini;
     bounds[1] = maxi;
   }
   HD real inter(Rayf ray) {
-    real tmin,tmax,tymin,tymax,tzmin,tzmax;
+    real tmin, tmax, tymin, tymax, tzmin, tzmax;
 
-    tmin = (bounds[1-ray.sign[0]].x - ray.orig.x) * ray.inv_dir.x;
+    tmin = (bounds[1 - ray.sign[0]].x - ray.orig.x) * ray.inv_dir.x;
     tmax = (bounds[ray.sign[0]].x - ray.orig.x) * ray.inv_dir.x;
-    tymin = (bounds[1-ray.sign[1]].y - ray.orig.y) * ray.inv_dir.y;
+    tymin = (bounds[1 - ray.sign[1]].y - ray.orig.y) * ray.inv_dir.y;
     tymax = (bounds[ray.sign[1]].y - ray.orig.y) * ray.inv_dir.y;
-    tzmin = (bounds[1-ray.sign[2]].z - ray.orig.z) * ray.inv_dir.z;
+    tzmin = (bounds[1 - ray.sign[2]].z - ray.orig.z) * ray.inv_dir.z;
     tzmax = (bounds[ray.sign[2]].z - ray.orig.z) * ray.inv_dir.z;
 
-    if((tmin > tymax) || (tymin > tmax))
-      return -1.0f;
+    if ((tmin > tymax) || (tymin > tmax)) return -1.0f;
 
-    tmin = max(tmin,tymin);
-    tmax = min(tmax,tymax);
+    tmin = max(tmin, tymin);
+    tmax = min(tmax, tymax);
 
-    if((tmin > tzmax) || (tzmin > tmax))
-      return -1.0f;
+    if ((tmin > tzmax) || (tzmin > tmax)) return -1.0f;
 
-    tmin = max(tmin,tzmin);
-    tmax = min(tmax,tzmax);
+    tmin = max(tmin, tzmin);
+    tmax = min(tmax, tzmax);
 
-    if(tmin < 0) {
-      if(tmax < 0) {
+    if (tmin < 0) {
+      if (tmax < 0) {
         return -1.0f;
       }
       return tmax;
@@ -90,26 +89,26 @@ struct Box {
     return tmin;
   }
   HD Vec3f normal(Rayf ray, Vec3f pos) {
-    if(ray.sign[0] && abs(pos.x - bounds[0].x) < 1e-3)
-      return Vec3f{1.0f,0.0f,0.0f};
-    if(!ray.sign[0] && abs(pos.x - bounds[1].x) < 1e-3)
-      return Vec3f{-1.0f,0.0f,0.0f};
-    if(ray.sign[1] && abs(pos.y - bounds[0].y) < 1e-3)
-      return Vec3f{0.0f,1.0f,0.0f};
-    if(!ray.sign[1] && abs(pos.y - bounds[1].y) < 1e-3)
-      return Vec3f{0.0f,-1.0f,0.0f};
-    if(ray.sign[2] && abs(pos.z - bounds[0].z) < 1e-3)
-      return Vec3f{0.0f,0.0f,1.0f};
-    if(!ray.sign[2] && abs(pos.z - bounds[1].z) < 1e-3)
-      return Vec3f{0.0f,0.0f,-1.0f};
-    return Vec3f{1.0f,1.0f,1.0f};
+    if (ray.sign[0] && abs(pos.x - bounds[0].x) < 1e-3)
+      return Vec3f{1.0f, 0.0f, 0.0f};
+    if (!ray.sign[0] && abs(pos.x - bounds[1].x) < 1e-3)
+      return Vec3f{-1.0f, 0.0f, 0.0f};
+    if (ray.sign[1] && abs(pos.y - bounds[0].y) < 1e-3)
+      return Vec3f{0.0f, 1.0f, 0.0f};
+    if (!ray.sign[1] && abs(pos.y - bounds[1].y) < 1e-3)
+      return Vec3f{0.0f, -1.0f, 0.0f};
+    if (ray.sign[2] && abs(pos.z - bounds[0].z) < 1e-3)
+      return Vec3f{0.0f, 0.0f, 1.0f};
+    if (!ray.sign[2] && abs(pos.z - bounds[1].z) < 1e-3)
+      return Vec3f{0.0f, 0.0f, -1.0f};
+    return Vec3f{1.0f, 1.0f, 1.0f};
   }
 };
 
 enum class ObjectType { sphere, box, plane };
 
 struct Object {
-  Color color;
+  Texture texture;
   ObjectType type;
   union {
     Sphere sphere;
