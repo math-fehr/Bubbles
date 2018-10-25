@@ -106,9 +106,14 @@ template <class T> struct Vec3 {
   friend std::ostream &operator<<(std::ostream &out, Vec3 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
   }
+
 };
 
 using Vec3f = Vec3<real>;
+
+static Vec3f X{1,0,0};
+static Vec3f Y{0,1,0};
+static Vec3f Z{0,0,1};
 
 //  ____
 // |  _ \ __ _ _   _
@@ -119,13 +124,15 @@ using Vec3f = Vec3<real>;
 
 template <class T> struct Ray {
   Vec3<T> orig, dir, inv_dir; // dir must be normalized
-  int sign[3]; // The sign of dir components
+  int sign[3];                // The sign of dir components
   HD Ray(Vec3<T> orig, Vec3<T> dir_)
       : orig(orig), dir(dir_.normalized()), inv_dir{1.0f / dir.x, 1.0f / dir.y,
                                                     1.0f / dir.z},
         sign{dir.x > 0, dir.y > 0, dir.z > 0} {}
   HD T projindex(const Vec3<T> &vec) const { return (vec - orig) | dir; }
-  HD Vec3f projpoint(const Vec3<T> &vec) const { return (*this)(proindex(vec)); }
+  HD Vec3f projpoint(const Vec3<T> &vec) const {
+    return (*this)(proindex(vec));
+  }
 
   HD Vec3<T> operator()(T index) const { return orig + index * dir; }
 
@@ -143,7 +150,15 @@ using Rayf = Ray<real>;
 // |_|  |_|\__,_|\__|____/
 
 template <class T> struct Mat3 {
+  // WARNING
+  // Initialization with braces : row vectors
+  // Initialization with parenthesis : column vectors
   Vec3<T> r[3]; // row vectors
+  Mat3(Vec3<T> c0, Vec3<T> c1, Vec3<T> c2) : r {
+    Vec3<T>{c0.x, c1.x, c2.x}, Vec3<T>{c0.y, c2.y, c2.y}, Vec3<T> {
+      c0.z, c1.z, c2.z
+    }
+  }{}
   HD Mat3 &operator+=(const Mat3 &o) {
     r[0] += o.r[0];
     r[1] += o.r[1];
@@ -184,6 +199,73 @@ template <class T> struct Mat3 {
 };
 
 using Mat3f = Mat3<real>;
+
+//   ___              _                  _
+//  / _ \ _   _  __ _| |_ ___ _ __ _ __ (_) ___  _ __
+// | | | | | | |/ _` | __/ _ \ '__| '_ \| |/ _ \| '_ \
+// | |_| | |_| | (_| | ||  __/ |  | | | | | (_) | | | |
+//  \__\_\\__,_|\__,_|\__\___|_|  |_| |_|_|\___/|_| |_|
+
+template <typename T> struct Quat {
+  float w;
+  Vec3<T> v;
+  Quat(Vec3<T> v) : w(0), v(v) {}
+
+  HD Quat &operator+=(const Quat &o) {
+    w += o.w;
+    v += o.v;
+    return *this;
+  }
+  HD Quat &operator-=(const Quat &o) {
+    w -= o.w;
+    v -= o.v;
+    return *this;
+  }
+  HD Quat &operator*=(T f) {
+    w *= f;
+    v *= f;
+    return *this;
+  }
+  HD Quat &operator/=(T f) {
+    w /= f;
+    v /= f;
+    return *this;
+  }
+  HD Quat operator-() const { return Quat{-w, -v}; }
+  HD friend Quat operator+(Quat v, const Quat &v2) { return v += v2; }
+  HD friend Quat operator-(Quat v, const Quat &v2) { return v -= v2; }
+  HD friend Quat operator*(Quat v, float f) { return v *= f; }
+  HD friend Quat operator*(float f, Quat v) { return v *= f; }
+  HD friend Quat operator/(Quat v, float f) { return v /= f; }
+
+  HD Quat conj() const { return Quat{v, -w}; }
+  HD Quat &conjeq() const {
+    w = -w;
+    return *this;
+  }
+
+  HD Quat operator*(const Quat &o) const {
+    return Quat{w * o.w - (v | o.v), w * o.v + o.w * v + (v ^ o.v)};
+  }
+
+  HD Vec3<T> apply(const Vec3<T> v) { return *this * v * conj(); }
+
+  HD Mat3<T> toMat() {
+    return Mat(apply(X),apply(Y),apply(Z));
+  }
+
+  HD T norm2() const { return w * w + v.norm2(); }
+  HD T norm() const { return sqrt(norm2()); }
+  HD Quat &normalize() { return *this /= norm(); }
+  HD Quat normalized() const { return *this / norm(); }
+
+  friend std::ostream &operator<<(std::ostream &out, Quat q) {
+    return out << q.w << " + " << q.im.x << "i + " << q.im.y << "j + " << q.im.z
+               << "k";
+  }
+};
+
+using Quatf = Quat<real>;
 
 //   ____      _
 //  / ___|___ | | ___  _ __

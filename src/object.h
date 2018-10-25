@@ -59,6 +59,7 @@ struct Box {
     bounds[0] = mini;
     bounds[1] = maxi;
   }
+
   HD real inter(Rayf ray) {
     real tmin, tmax, tymin, tymax, tzmin, tzmax;
 
@@ -88,6 +89,7 @@ struct Box {
 
     return tmin;
   }
+
   HD Vec3f normal(Rayf ray, Vec3f pos) {
     int is_interior = (bounds[0].x <= ray.orig.x and ray.orig.x <= bounds[1].x and
                        bounds[0].y <= ray.orig.y and ray.orig.y <= bounds[1].y and

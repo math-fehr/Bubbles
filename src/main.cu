@@ -5,6 +5,8 @@
 #include "object.h"
 #include <cuda_gl_interop.h>
 
+using namespace std;
+
 static void show_fps_and_window_size(GLFWwindow *window) {
   // fps counter in static variables
   static double previous_time = 0.0;
@@ -74,8 +76,8 @@ int main(int argc, char *argv[]) {
   cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(),
               cudaMemcpyHostToDevice));
 
-  unsigned init_width = 640;
-  unsigned init_height = 480;
+  unsigned init_width = 1024;
+  unsigned init_height = 720;
 
   Vec3f camera_pos{0.0f, 0.0f, 20.0f};
   Vec3f camera_dir{0, 0, -1};
@@ -119,6 +121,7 @@ int main(int argc, char *argv[]) {
   while (!glfwWindowShouldClose(interop_window.window.get())) {
     show_fps_and_window_size(interop_window.window.get());
 
+
     // Execute the CUDA code
     std::tie(camera.screen_width, camera.screen_height) =
         interop_window.interop_data.get_size();
@@ -128,8 +131,9 @@ int main(int argc, char *argv[]) {
 
     // Get events
     glfwPollEvents();
+    // update physics, simulation, ...
 
-    cuda(DeviceSynchronize());
+    cudaDeviceSynchronize();
 
     // Switch buffers
     interop_window.interop_data.blit_buffer();

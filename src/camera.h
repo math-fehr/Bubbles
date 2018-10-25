@@ -3,12 +3,12 @@
 #include "geom.h"
 
 class Camera {
-  Vec3f pos;      // position
-  Vec3f basedir;  // direction camera points to
-  Vec3f up;       // world up
-  Vec3f xunit;    // x unit vector in camera plane
-  Vec3f yunit;    // y unit vector in camera plane
-  real fov;       // The field of view in radians
+  Vec3f pos;     // position
+  Vec3f basedir; // direction camera points to
+  Vec3f up;      // world up
+  Vec3f xunit;   // x unit vector in camera plane
+  Vec3f yunit;   // y unit vector in camera plane
+  real fov;      // The field of view in radians
   real scale;
 
 public:
@@ -32,7 +32,8 @@ public:
   HD Rayf get_ray(real x_pixel, real y_pixel) {
     real image_aspect_ratio = (real)screen_width / (real)screen_height;
 
-    // TODO expand this expression to simple affine function (x - xoff) * xunitscaled
+    // TODO expand this expression to simple affine function (x - xoff) *
+    // xunitscaled
 
     real x = (2.0f * ((x_pixel + 0.5f) / (real)screen_width) - 1) * scale;
     real y = (1 - 2.0f * ((y_pixel + 0.5f) / (real)screen_height)) * scale /
@@ -80,4 +81,6 @@ public:
     }
     update_units();
   }
+
+  Vec3f get_pos() { return pos; }
 };
