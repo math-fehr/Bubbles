@@ -56,8 +56,8 @@ int main(int argc, char *argv[]) {
   cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(),
               cudaMemcpyHostToDevice));
 
-  unsigned init_width = 1024;
-  unsigned init_height = 720;
+  unsigned init_width = 640;
+  unsigned init_height = 480;
 
   Vec3f camera_pos{0.0f, 0.0f, 20.0f};
   Vec3f camera_dir{0, 0, -1};
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
   InteropWindow interop_window(init_width, init_height);
 
   interop_window.key_callbacks.insert(
-      {GLFW_KEY_W, [&camera](GLFWwindow *, int action, int mods) {
+      {GLFW_KEY_W, [&camera](GLFWwindow *, int action, int mods) { // TODO cla
          camera.move_front(0.1);
        }});
   interop_window.key_callbacks.insert(

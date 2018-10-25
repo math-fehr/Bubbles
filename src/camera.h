@@ -8,7 +8,6 @@ class Camera {
   Vec3f up;       // world up
   Vec3f xunit;    // x unit vector in camera plane
   Vec3f yunit;    // y unit vector in camera plane
-  real lim_angle; // minimal angle between axis and up.
   real fov;       // The field of view in radians
   real scale;
 
@@ -33,6 +32,8 @@ public:
   HD Rayf get_ray(real x_pixel, real y_pixel) {
     real image_aspect_ratio = (real)screen_width / (real)screen_height;
 
+    // TODO expand this expression to simple affine function (x - xoff) * xunitscaled
+
     real x = (2.0f * ((x_pixel + 0.5f) / (real)screen_width) - 1) * scale;
     real y = (1 - 2.0f * ((y_pixel + 0.5f) / (real)screen_height)) * scale /
              image_aspect_ratio;
@@ -40,8 +41,6 @@ public:
     // Here x and y are the coordinate in the camera plane (distance one from
     // pos) with actual 3D world length.
 
-    // Vec3f direction_camera{x, y, -1};
-    // Vec3f direction = camera_to_world * direction_camera;
     Vec3f dir = basedir + x * xunit + y * yunit;
     return Rayf(pos, dir);
   }
@@ -68,8 +67,10 @@ public:
     Vec3f new_basedir = basedir + tan(angle) * yunit;
     new_basedir.normalize();
     real check = xunit | (basedir ^ up);
+    // TODO clamp is not fluid, why ?
     if (check < 0.01) {
       // need to clamp rotation;
+      // TODO clam
       Vec3f upd = (basedir ^ up) ^ up;
       // here basedir + upd is colinear to up
       upd -= upd.normalized() * 0.01;
@@ -77,5 +78,6 @@ public:
     } else {
       basedir = new_basedir;
     }
+    update_units();
   }
 };
