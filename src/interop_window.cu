@@ -73,7 +73,7 @@ GLFWwindow *glfw_window_create_and_init(unsigned width, unsigned height) {
   gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
   // Use vsync
-  glfwSwapInterval(0);
+  glfwSwapInterval(VSYNC);
 
   // only copy rgb, and ignore alpha value
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);

@@ -8,8 +8,6 @@
 #include "light.h"
 #include "object.h"
 
-#define THREADS_PER_BLOCK 256
-
 
 using namespace std;
 

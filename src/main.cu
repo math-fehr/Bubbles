@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
   cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(),
               cudaMemcpyHostToDevice));
 
-  unsigned init_width = 1920;
-  unsigned init_height = 1020;
+  unsigned init_width = X_BASE_SIZE;
+  unsigned init_height = Y_BASE_SIZE;
 
   Vec3f camera_pos{0.0f, 0.0f, 20.0f};
   Vec3f camera_dir{0, 0, -1};
