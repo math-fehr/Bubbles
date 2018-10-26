@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "assert_cuda.hpp"
 #include "kernel.cuh"
 
@@ -7,6 +9,9 @@
 #include "object.h"
 
 #define THREADS_PER_BLOCK 256
+
+
+using namespace std;
 
 // The surface where CUDA will write
 surface<void, cudaSurfaceType2D> surf;
@@ -48,7 +53,7 @@ __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
 __device__ Color compute_phong_color(Object *objects, unsigned n_objects,
                                      PointLight light,
                                      AmbiantLight ambiant_light,
-                                     Intersection intersection) {
+                                     const Intersection& intersection) {
   Vec2f uv = intersection.object.uv(intersection.point);
   Color point_color = intersection.object.texture.get_color(uv);
   Color ambiant_color = point_color * ambiant_light.color *
@@ -82,6 +87,7 @@ __device__ Color compute_texture(Object *objects, unsigned n_objects,
   return Color{1, 1, 1};
 }
 
+
 /**
  * Entry CUDA kernel. This is the code for one pixel
  */
@@ -107,6 +113,7 @@ __global__ void kernel(int counter, Object *objects, unsigned n_objects,
 
   Color color = compute_phong_color(objects, n_objects, light, ambiant_light,
                                     intersection);
+  color.clamp();
   rgbx.r = color.r * 255;
   rgbx.g = color.g * 255;
   rgbx.b = color.b * 255;

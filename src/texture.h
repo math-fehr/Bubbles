@@ -22,7 +22,7 @@ struct Texture {
     CheckBoard checkboard;
   };
 
-  HD Color get_color(Vec2f uv) {
+  HD Color get_color(Vec2f uv) const {
     switch (type) {
     case TextureType::uniform_color:
       return uniform_color.color;
