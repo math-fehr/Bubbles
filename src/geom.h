@@ -94,6 +94,11 @@ template <class T> struct Vec3 {
   HD friend Vec3 operator*(float f, Vec3 v) { return v *= f; }
   HD friend Vec3 operator/(Vec3 v, float f) { return v /= f; }
 
+  HD bool operator<(Vec3 v) const { return x < v.x && y < v.y && z < v.z; }
+  HD bool operator>(Vec3 v) const { return x > v.x && y > v.y && z > v.z; }
+  HD bool operator<=(Vec3 v) const { return x <= v.x && y <= v.y && z <= v.z; }
+  HD bool operator>=(Vec3 v) const { return x >= v.x && y >= v.y && z >= v.z; }
+
   HD Vec3 operator^(const Vec3 &v) const {
     return Vec3{y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x};
   }

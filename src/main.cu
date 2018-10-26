@@ -65,8 +65,8 @@ int main(int argc, char *argv[]) {
     texture.uniform_color.color = color;
     texture.diffusion_factor = 0.0f;
     texture.ambiant_factor = 0.0f;
-    texture.refract_factor = 1.0f;
-    texture.refract_index = 1.0f;
+    texture.refract_factor = 1.1f;
+    texture.refract_index = 1.1f;
     object.texture = texture;
     object.type = ObjectType::box;
     object.box = Box{min_pos, max_pos};

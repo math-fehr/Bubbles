@@ -20,6 +20,8 @@ struct Sphere {
     }
   }
   HD Vec3f normal(Vec3f pos) const { return (center - pos).normalized(); }
+
+  HD bool is_in(Vec3f pos) const { return (pos - center).norm2() < radius2; }
 };
 
 // The plane follows the equation normal_vec | point = constant
@@ -91,11 +93,7 @@ struct Box {
   }
 
   HD Vec3f normal(Rayf ray, Vec3f inter_pos) const {
-    int is_interior = (bounds[0].x <= ray.orig.x and ray.orig.x <= bounds[1].x and
-                       bounds[0].y <= ray.orig.y and ray.orig.y <= bounds[1].y and
-                       bounds[0].z <= ray.orig.z and ray.orig.z <= bounds[1].z)
-                          ? 1
-                          : 0;
+    int is_interior = (is_in(ray.orig)) ? 1 : 0;
     if (ray.sign[0] && abs(inter_pos.x - bounds[is_interior].x) < 1e-3)
       return Vec3f{-1.0f, 0.0f, 0.0f};
     if (!ray.sign[0] && abs(inter_pos.x - bounds[1 - is_interior].x) < 1e-3)
@@ -123,6 +121,8 @@ struct Box {
     if (abs(pos.z - bounds[1].z) < 1e-3) return Vec2f{x_uv, y_uv};
     return Vec2f{0.0f, 0.0f};
   }
+
+  HD bool is_in(Vec3f pos) const { return bounds[0] < pos && pos < bounds[1]; }
 };
 
 enum class ObjectType { sphere, box, plane };
@@ -168,6 +168,17 @@ struct Object {
       return box.uv(intersection_point);
     default:
       return Vec2f{0.0f, 0.0f};
+    }
+  }
+
+  HD bool is_in(Vec3f point) const {
+    switch (type) {
+    case ObjectType::box:
+      return box.is_in(point);
+    case ObjectType::sphere:
+      return sphere.is_in(point);
+    default:
+      return false;
     }
   }
 };
