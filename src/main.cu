@@ -88,6 +88,8 @@ int main(int argc, char *argv[]) {
   Camera camera(camera_pos, camera_dir, camera_up, 51.52f * M_PI / 180.0f,
                 init_width, init_height);
 
+  camera.gamma = 1.5;
+
   InteropWindow interop_window(init_width, init_height);
 
   interop_window.key_callbacks.insert(

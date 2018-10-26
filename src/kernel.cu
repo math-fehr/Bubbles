@@ -14,14 +14,6 @@ using namespace std;
 // The surface where CUDA will write
 surface<void, cudaSurfaceType2D> surf;
 
-// The value of a pixel
-struct RGBA {
-  unsigned r : 8;
-  unsigned g : 8;
-  unsigned b : 8;
-  unsigned a : 8;
-};
-
 struct Intersection {
   int object_id;
   Object object;
@@ -149,10 +141,8 @@ __global__ void kernel(int counter, Object *objects, unsigned n_objects,
 
   Color color = compute_texture(objects, n_objects, light, ambiant_light,
                                     intersection, ray);
-  color.clamp();
-  rgbx.r = color.r * 255;
-  rgbx.g = color.g * 255;
-  rgbx.b = color.b * 255;
+
+  rgbx = color.to8bit(camera.gamma);
 
   if (idx < camera.screen_height * camera.screen_width) {
     surf2Dwrite(rgbx, surf, x_pixel * sizeof(rgbx), y_pixel,

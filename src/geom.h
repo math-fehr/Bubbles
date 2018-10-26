@@ -106,14 +106,13 @@ template <class T> struct Vec3 {
   friend std::ostream &operator<<(std::ostream &out, Vec3 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
   }
-
 };
 
 using Vec3f = Vec3<real>;
 
-static Vec3f X{1,0,0};
-static Vec3f Y{0,1,0};
-static Vec3f Z{0,0,1};
+static Vec3f X{1, 0, 0};
+static Vec3f Y{0, 1, 0};
+static Vec3f Z{0, 0, 1};
 
 //  ____
 // |  _ \ __ _ _   _
@@ -154,11 +153,9 @@ template <class T> struct Mat3 {
   // Initialization with braces : row vectors
   // Initialization with parenthesis : column vectors
   Vec3<T> r[3]; // row vectors
-  Mat3(Vec3<T> c0, Vec3<T> c1, Vec3<T> c2) : r {
-    Vec3<T>{c0.x, c1.x, c2.x}, Vec3<T>{c0.y, c2.y, c2.y}, Vec3<T> {
-      c0.z, c1.z, c2.z
-    }
-  }{}
+  Mat3(Vec3<T> c0, Vec3<T> c1, Vec3<T> c2)
+      : r{Vec3<T>{c0.x, c1.x, c2.x}, Vec3<T>{c0.y, c2.y, c2.y},
+          Vec3<T>{c0.z, c1.z, c2.z}} {}
   HD Mat3 &operator+=(const Mat3 &o) {
     r[0] += o.r[0];
     r[1] += o.r[1];
@@ -250,9 +247,7 @@ template <typename T> struct Quat {
 
   HD Vec3<T> apply(const Vec3<T> v) { return *this * v * conj(); }
 
-  HD Mat3<T> toMat() {
-    return Mat(apply(X),apply(Y),apply(Z));
-  }
+  HD Mat3<T> toMat() { return Mat(apply(X), apply(Y), apply(Z)); }
 
   HD T norm2() const { return w * w + v.norm2(); }
   HD T norm() const { return sqrt(norm2()); }
@@ -273,6 +268,16 @@ using Quatf = Quat<real>;
 // | |__| (_) | | (_) | |
 //  \____\___/|_|\___/|_|
 
+// The discrete value of a pixel
+
+using uchar = unsigned char;
+struct RGBA {
+  uchar r : 8;
+  uchar g : 8;
+  uchar b : 8;
+  uchar a : 8;
+};
+
 struct Color {
   real r, g, b;
   HD inline Color &clamp() {
@@ -284,9 +289,10 @@ struct Color {
     if (b > 1) b = 1;
     return *this;
   }
-  HD std::array<char, 3> to8bit() {
+  HD RGBA to8bit(real gamma) {
     clamp();
-    return std::array<char, 3>{char(r * 255), char(g * 255), char(b * 255)};
+    return RGBA{uchar(std::pow(r, gamma) * 255), uchar(std::pow(g, gamma) * 255),
+                uchar(std::pow(b, gamma) * 255), 0};
   }
   HD inline Color &operator+=(const Color &o) {
     r += o.r;

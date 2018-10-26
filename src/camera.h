@@ -14,6 +14,7 @@ class Camera {
 public:
   unsigned screen_width;  // The screen width in pixel
   unsigned screen_height; // The screen height in pixel
+  real gamma; // gamma color space to render on screen
 
   Camera() = delete;
   Camera(Vec3f pos, Vec3f basedir, Vec3f up, real fov, unsigned screen_width,
@@ -69,12 +70,12 @@ public:
     new_basedir.normalize();
     real check = xunit | (basedir ^ up);
     // TODO clamp is not fluid, why ?
-    if (check < 0.01) {
+    if (check < 0.1) {
       // need to clamp rotation;
       // TODO clam
       Vec3f upd = (basedir ^ up) ^ up;
       // here basedir + upd is colinear to up
-      upd -= upd.normalized() * 0.01;
+      upd -= upd.normalized() * 0.1;
       basedir += upd;
     } else {
       basedir = new_basedir;
