@@ -7,7 +7,9 @@ struct PointLight {
   Color color;
   PointLight() = default;
   // Get the ray pointing to point, and coming from the light
-  HD Rayf ray_to_point(Vec3f point) { return Rayf(center, point - center); }
+  HD Rayf ray_to_point(Vec3f point) const {
+    return Rayf(center, point - center);
+  }
 };
 
 struct AmbiantLight {

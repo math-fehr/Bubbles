@@ -94,32 +94,53 @@ struct Box {
 
   HD Vec3f normal(Rayf ray, Vec3f inter_pos) const {
     int is_interior = (is_in(ray.orig)) ? 1 : 0;
-    if (ray.sign[0] && abs(inter_pos.x - bounds[is_interior].x) < 1e-3)
+    real x_0 =
+        !ray.sign[0] ? 1.0f / 0.0f : abs(inter_pos.x - bounds[is_interior].x);
+    real x_1 = ray.sign[0] ? 1.0f / 0.0f
+                           : abs(inter_pos.x - bounds[1 - is_interior].x);
+    real y_0 =
+        !ray.sign[1] ? 1.0f / 0.0f : abs(inter_pos.y - bounds[is_interior].y);
+    real y_1 = ray.sign[1] ? 1.0f / 0.0f
+                           : abs(inter_pos.y - bounds[1 - is_interior].y);
+    real z_0 =
+        !ray.sign[2] ? 1.0f / 0.0f : abs(inter_pos.z - bounds[is_interior].z);
+    real z_1 = ray.sign[2] ? 1.0f / 0.0f
+                           : abs(inter_pos.z - bounds[1 - is_interior].z);
+    real mini = min(x_0, min(x_1, min(y_0, min(y_1, min(z_0, z_1)))));
+    if (x_0 == mini) {
       return Vec3f{-1.0f, 0.0f, 0.0f};
-    if (!ray.sign[0] && abs(inter_pos.x - bounds[1 - is_interior].x) < 1e-3)
+    } else if (x_1 == mini) {
       return Vec3f{1.0f, 0.0f, 0.0f};
-    if (ray.sign[1] && abs(inter_pos.y - bounds[is_interior].y) < 1e-3)
+    } else if (y_0 == mini) {
       return Vec3f{0.0f, -1.0f, 0.0f};
-    if (!ray.sign[1] && abs(inter_pos.y - bounds[1 - is_interior].y) < 1e-3)
+    } else if (y_1 == mini) {
       return Vec3f{0.0f, 1.0f, 0.0f};
-    if (ray.sign[2] && abs(inter_pos.z - bounds[is_interior].z) < 1e-3)
+    } else if (z_0 == mini) {
       return Vec3f{0.0f, 0.0f, -1.0f};
-    if (!ray.sign[2] && abs(inter_pos.z - bounds[1 - is_interior].z) < 1e-3)
+    } else {
       return Vec3f{0.0f, 0.0f, 1.0f};
-    return Vec3f{1, 0, 0};
+    }
   }
 
   HD Vec2f uv(Vec3f pos) const {
-    float x_uv = (bounds[1].x - pos.x) / (bounds[1].x - bounds[0].x);
-    float y_uv = (bounds[1].y - pos.y) / (bounds[1].y - bounds[0].y);
-    float z_uv = (bounds[1].z - pos.z) / (bounds[1].z - bounds[0].z);
-    if (abs(pos.x - bounds[0].x) < 1e-3) return Vec2f{y_uv, z_uv};
-    if (abs(pos.x - bounds[1].x) < 1e-3) return Vec2f{y_uv, z_uv};
-    if (abs(pos.y - bounds[0].y) < 1e-3) return Vec2f{x_uv, z_uv};
-    if (abs(pos.y - bounds[1].y) < 1e-3) return Vec2f{x_uv, z_uv};
-    if (abs(pos.z - bounds[0].z) < 1e-3) return Vec2f{x_uv, y_uv};
-    if (abs(pos.z - bounds[1].z) < 1e-3) return Vec2f{x_uv, y_uv};
-    return Vec2f{0.0f, 0.0f};
+    real x_uv = clamp((bounds[1].x - pos.x) / (bounds[1].x - bounds[0].x));
+    real y_uv = clamp((bounds[1].y - pos.y) / (bounds[1].y - bounds[0].y));
+    real z_uv = clamp((bounds[1].z - pos.z) / (bounds[1].z - bounds[0].z));
+    real x_min = abs(pos.x - bounds[0].x);
+    real x_max = abs(pos.x - bounds[1].x);
+    real y_min = abs(pos.y - bounds[0].y);
+    real y_max = abs(pos.y - bounds[1].y);
+    real z_min = abs(pos.z - bounds[0].z);
+    real z_max = abs(pos.z - bounds[1].z);
+    real mini =
+        min(x_min, min(x_max, min(y_min, min(y_max, min(z_min, z_max)))));
+    if (mini == x_min || mini == x_max) {
+      return Vec2f{y_uv, z_uv};
+    } else if (mini == y_min || mini == y_max) {
+      return Vec2f{x_uv, z_uv};
+    } else {
+      return Vec2f{x_uv, y_uv};
+    }
   }
 
   HD bool is_in(Vec3f pos) const { return bounds[0] < pos && pos < bounds[1]; }

@@ -2,6 +2,7 @@
 #include "geom.h"
 #include "interop_window.hpp"
 #include "kernel.cuh"
+#include "light.h"
 #include "object.h"
 #include <cuda_gl_interop.h>
 
@@ -78,6 +79,11 @@ int main(int argc, char *argv[]) {
   cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(),
               cudaMemcpyHostToDevice));
 
+  PointLight light{Vec3f{-30.0f, 0.0f, 0.0f}, Color{1.0f, 1.0f, 1.0f}};
+  AmbiantLight ambiant_light{1.0f, 1.0f, 1.0f};
+
+  Scene scene{d_objects, (unsigned)objects.size(), light, ambiant_light};
+
   unsigned init_width = X_BASE_SIZE;
   unsigned init_height = Y_BASE_SIZE;
 
@@ -125,13 +131,12 @@ int main(int argc, char *argv[]) {
   while (!glfwWindowShouldClose(interop_window.window.get())) {
     show_fps_and_window_size(interop_window.window.get());
 
-
     // Execute the CUDA code
     std::tie(camera.screen_width, camera.screen_height) =
         interop_window.interop_data.get_size();
 
-    kernel_launcher(interop_window.interop_data.get_current_cuda_array(),
-                    d_objects, objects.size(), camera);
+    kernel_launcher(interop_window.interop_data.get_current_cuda_array(), scene,
+                    camera);
 
     // Get events
     glfwPollEvents();

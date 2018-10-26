@@ -39,17 +39,16 @@ __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
                       objects[front_object].normal(ray, intersection_point)};
 }
 
-__device__ Color compute_texture__(Object *objects, unsigned n_objects,
-                                   PointLight light, AmbiantLight ambiant_light,
+__device__ Color compute_texture__(const Scene &scene,
                                    Intersection intersection, Rayf ray) {
   Vec2f uv = intersection.object.uv(intersection.point);
   Color point_color = intersection.object.texture.get_color(uv);
-  Color ambiant_color = point_color * ambiant_light.color *
+  Color ambiant_color = point_color * scene.ambiant_light.color *
                         intersection.object.texture.ambiant_factor;
 
-  Rayf light_ray = light.ray_to_point(intersection.point);
+  Rayf light_ray = scene.light.ray_to_point(intersection.point);
   Intersection light_intersection =
-      intersect_all(objects, n_objects, light_ray);
+      intersect_all(scene.objects, scene.n_objects, light_ray);
   bool light_touch = intersection.object_id == light_intersection.object_id;
   light_touch &= (intersection.point - light_intersection.point).norm() < 1e-3;
 
@@ -60,7 +59,7 @@ __device__ Color compute_texture__(Object *objects, unsigned n_objects,
     diffusion_factor = max(0.0f, min(1.0f, diffusion_factor));
     diffusion_factor *= intersection.object.texture.diffusion_factor;
     diffuse_color = intersection.object.texture.uniform_color.color *
-                    diffusion_factor * light.color;
+                    diffusion_factor * scene.light.color;
   }
 
   return diffuse_color + ambiant_color;
@@ -83,17 +82,16 @@ __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
   return true;
 }
 
-__device__ Color compute_texture(Object *objects, unsigned n_objects,
-                                 PointLight light, AmbiantLight ambiant_light,
-                                 Intersection intersection, Rayf ray) {
+__device__ Color compute_texture(const Scene &scene, Intersection intersection,
+                                 Rayf ray) {
   Vec2f uv = intersection.object.uv(intersection.point);
   Color point_color = intersection.object.texture.get_color(uv);
-  Color ambiant_color = point_color * ambiant_light.color *
+  Color ambiant_color = point_color * scene.ambiant_light.color *
                         intersection.object.texture.ambiant_factor;
 
-  Rayf light_ray = light.ray_to_point(intersection.point);
+  Rayf light_ray = scene.light.ray_to_point(intersection.point);
   Intersection light_intersection =
-      intersect_all(objects, n_objects, light_ray);
+      intersect_all(scene.objects, scene.n_objects, light_ray);
   bool light_touch = intersection.object_id == light_intersection.object_id;
   light_touch &= (intersection.point - light_intersection.point).norm() < 1e-3;
 
@@ -104,7 +102,7 @@ __device__ Color compute_texture(Object *objects, unsigned n_objects,
     diffusion_factor = max(0.0f, min(1.0f, diffusion_factor));
     diffusion_factor *= intersection.object.texture.diffusion_factor;
     diffuse_color = intersection.object.texture.uniform_color.color *
-                    diffusion_factor * light.color;
+                    diffusion_factor * scene.light.color;
   }
 
   // Refraction color
@@ -135,12 +133,11 @@ __device__ Color compute_texture(Object *objects, unsigned n_objects,
       }
     }
     Intersection refract_intersection =
-        intersect_all(objects, n_objects, refract_ray_out);
+        intersect_all(scene.objects, scene.n_objects, refract_ray_out);
 
     Color color_refract =
         intersection.object.texture.refract_factor *
-        compute_texture__(objects, n_objects, light, ambiant_light,
-                          refract_intersection, refract_ray_out);
+        compute_texture__(scene, refract_intersection, refract_ray_out);
     return diffuse_color + ambiant_color + color_refract;
   }
   return diffuse_color + ambiant_color;
@@ -149,11 +146,7 @@ __device__ Color compute_texture(Object *objects, unsigned n_objects,
 /**
  * Entry CUDA kernel. This is the code for one pixel
  */
-__global__ void kernel(int counter, Object *objects, unsigned n_objects,
-                       Camera camera) {
-  PointLight light{Vec3f{-30.0f, 0.0f, 0.0f}, Color{1, 1, 1}};
-  AmbiantLight ambiant_light{1.0f, 1.0f, 1.0f};
-
+__global__ void kernel(Scene scene, Camera camera) {
   // pixel coordinates
   int idx = (blockDim.x * blockIdx.x) + threadIdx.x;
   int x_pixel = idx % camera.screen_width;
@@ -164,13 +157,10 @@ __global__ void kernel(int counter, Object *objects, unsigned n_objects,
   RGBA rgbx;
   rgbx.r = 0, rgbx.g = 0, rgbx.b = 0;
 
-  Intersection intersection = intersect_all(objects, n_objects, ray);
-  Rayf light_ray = light.ray_to_point(intersection.point);
+  Intersection intersection =
+      intersect_all(scene.objects, scene.n_objects, ray);
 
-  Vec3f normal_vec = intersection.object.normal(ray, intersection.distance);
-
-  Color color = compute_texture(objects, n_objects, light, ambiant_light,
-                                intersection, ray);
+  Color color = compute_texture(scene, intersection, ray);
   rgbx = color.to8bit(camera.gamma);
 
   if (idx < camera.screen_height * camera.screen_width) {
@@ -179,12 +169,7 @@ __global__ void kernel(int counter, Object *objects, unsigned n_objects,
   }
 }
 
-void kernel_launcher(cudaArray_const_t array, Object *objects,
-                     unsigned n_objects, Camera camera) {
-  // Count the number of frames displayed
-  static unsigned counter = 0;
-  counter += 1;
-
+void kernel_launcher(cudaArray_const_t array, Scene scene, Camera camera) {
   cuda(BindSurfaceToArray(surf, array));
 
   const int blocks =
@@ -192,6 +177,6 @@ void kernel_launcher(cudaArray_const_t array, Object *objects,
       THREADS_PER_BLOCK;
 
   if (blocks > 0) {
-    kernel<<<blocks, THREADS_PER_BLOCK>>>(counter, objects, n_objects, camera);
+    kernel<<<blocks, THREADS_PER_BLOCK>>>(scene, camera);
   }
 }

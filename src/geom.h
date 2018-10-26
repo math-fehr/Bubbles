@@ -6,7 +6,17 @@
 
 #define HD __host__ __device__
 
+//                 _
+//  _ __ ___  __ _| |
+// | '__/ _ \/ _` | |
+// | | |  __/ (_| | |
+// |_|  \___|\__,_|_|
+
 using real = float;
+
+inline HD real clamp(real a, real mini = 0, real maxi = 1) {
+  return min(maxi, max(mini, a));
+}
 
 // __     __        ____
 // \ \   / /__  ___|___ \
@@ -296,7 +306,8 @@ struct Color {
   }
   HD RGBA to8bit(real gamma) {
     clamp();
-    return RGBA{uchar(std::pow(r, gamma) * 255), uchar(std::pow(g, gamma) * 255),
+    return RGBA{uchar(std::pow(r, gamma) * 255),
+                uchar(std::pow(g, gamma) * 255),
                 uchar(std::pow(b, gamma) * 255), 0};
   }
   HD inline Color &operator+=(const Color &o) {

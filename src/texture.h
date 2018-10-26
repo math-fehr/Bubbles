@@ -4,11 +4,23 @@
 
 struct UniformColor {
   Color color;
+
+  HD Color get_color(Vec2f uv) const { return color; }
 };
 
 struct CheckBoard {
   Color color1, color2;
   float n_subdivision;
+
+  HD Color get_color(Vec2f uv) const {
+    int a = uv.x * n_subdivision * 2.0f;
+    int b = uv.y * n_subdivision * 2.0f;
+    if ((a + b) % 2) {
+      return color1;
+    } else {
+      return color2;
+    }
+  }
 };
 
 enum class TextureType { uniform_color, checkboard };
@@ -27,15 +39,9 @@ struct Texture {
   HD Color get_color(Vec2f uv) const {
     switch (type) {
     case TextureType::uniform_color:
-      return uniform_color.color;
+      return uniform_color.get_color(uv);
     case TextureType::checkboard: {
-      int a = uv.x * checkboard.n_subdivision * 2.0f;
-      int b = uv.y * checkboard.n_subdivision * 2.0f;
-      if ((a + b) % 2) {
-        return checkboard.color1;
-      } else {
-        return checkboard.color2;
-      }
+      return checkboard.get_color(uv);
     }
     default:
       return Color{0.0f, 0.0f, 0.0f};
