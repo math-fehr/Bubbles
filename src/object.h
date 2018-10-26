@@ -89,9 +89,9 @@ struct Box {
     return tmin;
   }
   HD Vec3f normal(Rayf ray, Vec3f pos) {
-    int is_interior = (bounds[0].x <= pos.x and pos.x <= bounds[1].x and
-                       bounds[0].y <= pos.y and pos.y <= bounds[1].y and
-                       bounds[0].z <= pos.z and pos.z <= bounds[1].z)
+    int is_interior = (bounds[0].x <= ray.orig.x and ray.orig.x <= bounds[1].x and
+                       bounds[0].y <= ray.orig.y and ray.orig.y <= bounds[1].y and
+                       bounds[0].z <= ray.orig.z and ray.orig.z <= bounds[1].z)
                           ? 1
                           : 0;
     if (ray.sign[0] && abs(pos.x - bounds[is_interior].x) < 1e-3)
@@ -110,9 +110,9 @@ struct Box {
   }
 
   HD Vec2f uv(Vec3f pos) {
-    float x_uv = (bounds[0].x - pos.x) / (bounds[0].x - bounds[0].x);
-    float y_uv = (bounds[0].y - pos.y) / (bounds[0].y - bounds[0].y);
-    float z_uv = (bounds[0].z - pos.z) / (bounds[0].z - bounds[0].z);
+    float x_uv = (bounds[1].x - pos.x) / (bounds[1].x - bounds[0].x);
+    float y_uv = (bounds[1].y - pos.y) / (bounds[1].y - bounds[0].y);
+    float z_uv = (bounds[1].z - pos.z) / (bounds[1].z - bounds[0].z);
     if (abs(pos.x - bounds[0].x) < 1e-3) return Vec2f{y_uv, z_uv};
     if (abs(pos.x - bounds[1].x) < 1e-3) return Vec2f{y_uv, z_uv};
     if (abs(pos.y - bounds[0].y) < 1e-3) return Vec2f{x_uv, z_uv};

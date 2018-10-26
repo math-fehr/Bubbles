@@ -35,8 +35,10 @@ static void show_fps_and_window_size(GLFWwindow *window) {
 void add_scene_box(std::vector<Object> &objects) {
   Object object;
   Texture texture;
-  texture.type = TextureType::uniform_color;
-  texture.uniform_color.color = Color{1.0f, 1.0f, 1.0f};
+  texture.type = TextureType::checkboard;
+  texture.checkboard.color1 = Color{1.0f, 1.0f, 1.0f};
+  texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
+  texture.checkboard.n_subdivision = 10.0f;
   texture.diffusion_factor = 0.7f;
   texture.ambiant_factor = 0.3f;
   Vec3f min_pos = Vec3f{-31.0f, -31.0f, -31.0f};
