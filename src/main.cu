@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
 
   std::vector<Object> objects;
   add_scene_box(objects);
-  for (float i = 0.f; i < 19.99f; i += 2.0f) {
+  for (float i = 0.f; i < 19.99f; i += 20.0f) {
     Vec3f min_pos{i - 10.0f - 1.0f, i - 10.0f - 1.0f, -10.0f - 1.0f};
     Vec3f max_pos{i - 10.0f + 1.0f, i - 10.0f + 1.0f, -10.0f + 1.0f};
     Color color{1.0f, 1.0f, 1.0f};
@@ -63,8 +63,10 @@ int main(int argc, char *argv[]) {
     Texture texture;
     texture.type = TextureType::uniform_color;
     texture.uniform_color.color = color;
-    texture.diffusion_factor = 0.8f;
-    texture.ambiant_factor = 0.1f;
+    texture.diffusion_factor = 0.0f;
+    texture.ambiant_factor = 0.0f;
+    texture.refract_factor = 1.0f;
+    texture.refract_index = 1.0f;
     object.texture = texture;
     object.type = ObjectType::box;
     object.box = Box{min_pos, max_pos};
