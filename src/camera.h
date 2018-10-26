@@ -68,14 +68,11 @@ public:
   void rotate_up(real angle) {
     Vec3f new_basedir = basedir + tan(angle) * yunit;
     new_basedir.normalize();
-    real check = xunit | (basedir ^ up);
-    // TODO clamp is not fluid, why ?
-    if (check < 0.1) {
-      // need to clamp rotation;
-      // TODO clam
+    real check = xunit | (new_basedir ^ up);
+    if (check < 0.001) {
       Vec3f upd = (basedir ^ up) ^ up;
       // here basedir + upd is colinear to up
-      upd -= upd.normalized() * 0.1;
+      upd -= upd.normalized() * 0.001;
       basedir += upd;
     } else {
       basedir = new_basedir;
