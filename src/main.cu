@@ -52,6 +52,19 @@ void add_scene_box(std::vector<Object> &objects) {
   objects.push_back(object);
 }
 
+void update_camera(Camera &camera, const InteropWindow &win, real time) {
+  real speed = 1.0; // in unit per second
+  real d = speed * time;
+  glfwPollEvents();
+  if (glfwGetKey(win.window.get(), GLFW_KEY_W) == GLFW_PRESS) camera.move_front(d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_S) == GLFW_PRESS) camera.move_front(-d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_A) == GLFW_PRESS) camera.move_lat(-d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_D) == GLFW_PRESS) camera.move_lat(d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_SPACE) == GLFW_PRESS) camera.move_up(d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+    camera.move_up(-d);
+}
+
 int main(int argc, char *argv[]) {
 
   std::vector<Object> objects;
@@ -110,29 +123,6 @@ int main(int argc, char *argv[]) {
 
   InteropWindow interop_window(init_width, init_height);
 
-  interop_window.key_callbacks.insert(
-      {GLFW_KEY_W, [&camera](GLFWwindow *, int action, int mods) { // TODO cla
-         camera.move_front(0.1);
-       }});
-  interop_window.key_callbacks.insert(
-      {GLFW_KEY_S, [&camera](GLFWwindow *, int action, int mods) {
-         camera.move_front(-0.1);
-       }});
-  interop_window.key_callbacks.insert(
-      {GLFW_KEY_A, [&camera](GLFWwindow *, int action, int mods) {
-         camera.move_lat(-0.1);
-       }});
-  interop_window.key_callbacks.insert(
-      {GLFW_KEY_D, [&camera](GLFWwindow *, int action, int mods) {
-         camera.move_lat(0.1);
-       }});
-  interop_window.key_callbacks.insert(
-      {GLFW_KEY_SPACE,
-       [&camera](GLFWwindow *, int action, int mods) { camera.move_up(0.1); }});
-  interop_window.key_callbacks.insert(
-      {GLFW_KEY_LEFT_CONTROL, [&camera](GLFWwindow *, int action, int mods) {
-         camera.move_up(-0.1);
-       }});
   interop_window.cursor_callback = [&camera](GLFWwindow *, double xupd,
                                              double yupd) {
     camera.rotate_lat(xupd * 0.005);
@@ -151,7 +141,7 @@ int main(int argc, char *argv[]) {
                     camera);
 
     // Get events
-    glfwPollEvents();
+    update_camera(camera,interop_window,0.1);
     // update physics, simulation, ...
 
     cudaDeviceSynchronize();
