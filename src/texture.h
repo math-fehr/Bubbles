@@ -30,7 +30,7 @@ struct Texture {
   real ambiant_factor;
   real diffusion_factor;
   real refract_factor = 0.0;
-  real refract_index = 0.0;
+  real refract_index = 1.0;
   union {
     UniformColor uniform_color;
     CheckBoard checkboard;

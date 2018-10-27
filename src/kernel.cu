@@ -22,7 +22,7 @@ struct Intersection {
 };
 
 __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
-                                      Rayf ray) {
+                                      const Rayf &ray) {
   int front_object = -1;
   real intersection_point = 1.f / 0.f;
 
@@ -39,30 +39,8 @@ __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
                       objects[front_object].normal(ray, intersection_point)};
 }
 
-__device__ Color compute_texture__(const Scene &scene,
-                                   Intersection intersection, Rayf ray) {
-  Vec2f uv = intersection.object.uv(intersection.point);
-  Color point_color = intersection.object.texture.get_color(uv);
-  Color ambiant_color = point_color * scene.ambiant_light.color *
-                        intersection.object.texture.ambiant_factor;
-
-  Rayf light_ray = scene.light.ray_to_point(intersection.point);
-  Intersection light_intersection =
-      intersect_all(scene.objects, scene.n_objects, light_ray);
-  bool light_touch = intersection.object_id == light_intersection.object_id;
-  light_touch &= (intersection.point - light_intersection.point).norm() < 1e-3;
-
-  Color diffuse_color{0.0f, 0.0f, 0.0f};
-  if (light_touch) {
-    // Diffusion color
-    real diffusion_factor = -intersection.normal | light_ray.dir;
-    diffusion_factor = max(0.0f, min(1.0f, diffusion_factor));
-    diffusion_factor *= intersection.object.texture.diffusion_factor;
-    diffuse_color = intersection.object.texture.uniform_color.color *
-                    diffusion_factor * scene.light.color;
-  }
-
-  return diffuse_color + ambiant_color;
+__device__ Intersection intersect_all(const Scene &scene, const Rayf &ray) {
+  return intersect_all(scene.objects, scene.n_objects, ray);
 }
 
 __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
@@ -82,16 +60,16 @@ __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
   return true;
 }
 
-__device__ Color compute_texture(const Scene &scene, Intersection intersection,
-                                 Rayf ray) {
+__device__ Color compute_phong_color(const Scene &scene,
+                                     const Intersection &intersection,
+                                     Rayf ray) {
   Vec2f uv = intersection.object.uv(intersection.point);
   Color point_color = intersection.object.texture.get_color(uv);
   Color ambiant_color = point_color * scene.ambiant_light.color *
                         intersection.object.texture.ambiant_factor;
 
   Rayf light_ray = scene.light.ray_to_point(intersection.point);
-  Intersection light_intersection =
-      intersect_all(scene.objects, scene.n_objects, light_ray);
+  Intersection light_intersection = intersect_all(scene, light_ray);
   bool light_touch = intersection.object_id == light_intersection.object_id;
   light_touch &= (intersection.point - light_intersection.point).norm() < 1e-3;
 
@@ -105,6 +83,17 @@ __device__ Color compute_texture(const Scene &scene, Intersection intersection,
                     diffusion_factor * scene.light.color;
   }
 
+  return diffuse_color + ambiant_color;
+}
+
+struct BouncingRays {
+  bool has_refraction;
+  real refraction_factor;
+  Rayf refraction_ray;
+};
+
+__device__ Color compute_texture(const Scene &scene, Intersection intersection,
+                                 Rayf ray) {
   // Refraction color
   if (intersection.object.texture.refract_factor > 0.0f) {
     Rayf refract_ray_out({}, {});
@@ -113,7 +102,7 @@ __device__ Color compute_texture(const Scene &scene, Intersection intersection,
           ray.dir, intersection.point, intersection.normal,
           intersection.object.texture.refract_index, 1.0f, &refract_ray_out);
       if (!has_refract) {
-        return diffuse_color + ambiant_color;
+        return Color{0.0f, 0.0f, 0.0f};
       }
     } else {
       Rayf refract_ray_in({}, {});
@@ -121,7 +110,7 @@ __device__ Color compute_texture(const Scene &scene, Intersection intersection,
           ray.dir, intersection.point, intersection.normal, 1.0f,
           intersection.object.texture.refract_index, &refract_ray_in);
       if (!has_refract) {
-        return diffuse_color + ambiant_color;
+        return Color{0.0f, 0.0f, 0.0f};
       }
       real out_point = intersection.object.intersect(refract_ray_in);
       has_refract = compute_refraction(
@@ -129,18 +118,65 @@ __device__ Color compute_texture(const Scene &scene, Intersection intersection,
           intersection.object.normal(refract_ray_in, out_point),
           intersection.object.texture.refract_index, 1.0f, &refract_ray_out);
       if (!has_refract) {
-        return diffuse_color + ambiant_color;
+        return Color{0.0f, 0.0f, 0.0f};
       }
     }
-    Intersection refract_intersection =
-        intersect_all(scene.objects, scene.n_objects, refract_ray_out);
+    Intersection refract_intersection = intersect_all(scene, refract_ray_out);
 
     Color color_refract =
         intersection.object.texture.refract_factor *
-        compute_texture__(scene, refract_intersection, refract_ray_out);
-    return diffuse_color + ambiant_color + color_refract;
+        compute_phong_color(scene, refract_intersection, refract_ray_out);
+    return color_refract;
   }
-  return diffuse_color + ambiant_color;
+  return Color{0.0f, 0.0f, 0.0f};
+}
+
+__device__ Color cast_ray(const Scene &scene, Rayf ray) {
+  Color final_color{0.0f, 0.0f, 0.0f};
+  real factor = 1.0f;
+  int recursion = 0;
+
+  while (true) {
+    // Compute the ambiant and diffuse color of the object intersected
+    Intersection intersection = intersect_all(scene, ray);
+    Color phong_color = compute_phong_color(scene, intersection, ray);
+
+    bool stop_recursion = (recursion == NUM_REFL);
+
+    // If we can't cast more rays, we augment the diffuse and ambiant factor
+    if (stop_recursion) {
+      phong_color /= intersection.object.texture.ambiant_factor +
+                     intersection.object.texture.diffusion_factor;
+    }
+
+    // We add the ambiant and diffuse color to the total color
+    final_color += phong_color * factor;
+
+    bool cast_more_rays =
+        !stop_recursion && intersection.object.texture.refract_factor != 0.0f;
+
+    // If there is no ray left to compute, we have the final color
+    if (!cast_more_rays) {
+      return final_color;
+    }
+
+    Rayf ray_refract;
+    bool is_in = intersection.object.is_in(ray.orig);
+    real index_in = is_in ? intersection.object.texture.refract_index : 1.0f;
+    real index_out = !is_in ? intersection.object.texture.refract_index : 1.0f;
+    bool has_refraction =
+        compute_refraction(ray.dir, intersection.point, intersection.normal,
+                           index_in, index_out, &ray_refract);
+
+    if (has_refraction) {
+      ray = ray_refract;
+      factor *= intersection.object.texture.refract_factor;
+      recursion++;
+      continue;
+    } else {
+      return final_color;
+    }
+  }
 }
 
 /**
@@ -160,7 +196,7 @@ __global__ void kernel(Scene scene, Camera camera) {
   Intersection intersection =
       intersect_all(scene.objects, scene.n_objects, ray);
 
-  Color color = compute_texture(scene, intersection, ray);
+  Color color = cast_ray(scene, ray);
   rgbx = color.to8bit(camera.gamma);
 
   if (idx < camera.screen_height * camera.screen_width) {

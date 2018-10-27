@@ -139,6 +139,7 @@ static Vec3f Z{0, 0, 1};
 template <class T> struct Ray {
   Vec3<T> orig, dir, inv_dir; // dir must be normalized
   int sign[3];                // The sign of dir components
+  Ray() = default;
   HD Ray(Vec3<T> orig, Vec3<T> dir_)
       : orig(orig), dir(dir_.normalized()), inv_dir{1.0f / dir.x, 1.0f / dir.y,
                                                     1.0f / dir.z},
@@ -334,6 +335,12 @@ struct Color {
     b *= f;
     return *this;
   }
+  HD inline Color &operator/=(real f) {
+    r /= f;
+    g /= f;
+    b /= f;
+    return *this;
+  }
   HD inline Color pow(real alpha) {
     return Color{std::pow(r, alpha), std::pow(r, alpha), std::pow(r, alpha)};
   }
@@ -342,6 +349,7 @@ struct Color {
   HD friend inline Color operator-(Color v, const Color v2) { return v -= v2; }
   HD friend inline Color operator*(Color v, const Color v2) { return v *= v2; }
   HD friend inline Color operator*(Color v, real f) { return v *= f; }
+  HD friend inline Color operator/(Color v, real f) { return v /= f; }
   HD friend inline Color operator*(real f, Color v) { return v *= f; }
 
   friend std::ostream &operator<<(std::ostream &out, Color c) {

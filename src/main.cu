@@ -64,10 +64,10 @@ int main(int argc, char *argv[]) {
     Texture texture;
     texture.type = TextureType::uniform_color;
     texture.uniform_color.color = color;
-    texture.diffusion_factor = 0.0f;
-    texture.ambiant_factor = 0.0f;
-    texture.refract_factor = 1.1f;
-    texture.refract_index = 1.1f;
+    texture.diffusion_factor = 0.1f;
+    texture.ambiant_factor = 0.1f;
+    texture.refract_factor = 0.8f;
+    texture.refract_index = 1.33f;
     object.texture = texture;
     object.type = ObjectType::box;
     object.box = Box{min_pos, max_pos};
