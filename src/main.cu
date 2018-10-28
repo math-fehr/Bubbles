@@ -74,6 +74,18 @@ int main(int argc, char *argv[]) {
     objects.push_back(object);
   }
 
+  Object object;
+  Vec3f pos{10.0f, 10.0f, 10.0f};
+  object.texture.type = TextureType::checkboard;
+  object.texture.ambiant_factor = 0.4f;
+  object.texture.diffusion_factor = 0.6f;
+  object.texture.checkboard.color1 = Color{1.0f, 1.0f, 1.0f};
+  object.texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
+  object.texture.checkboard.n_subdivision = 5.0f;
+  object.type = ObjectType::sphere;
+  object.sphere = Sphere{pos, 1.0f};
+  objects.push_back(object);
+
   Object *d_objects = nullptr;
   cuda(Malloc(&d_objects, sizeof(Object) * objects.size()));
   cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(),

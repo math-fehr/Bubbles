@@ -28,7 +28,7 @@ struct Sphere {
   HD Vec3f normal(Vec3f pos) const { return (center - pos).normalized(); }
   HD Vec2f uv(Vec3f pos) const {
     Vec3f d = (center - pos).normalized();
-    return Vec2f{0.5f + atan2f(d.z, d.x) / 2.f * 3.14159f,
+    return Vec2f{0.5f + atan2f(d.z, d.x) / (2.f * 3.14159f),
                  0.5f - asinf(d.y) / 3.14159f};
   }
   HD IntersectionData intersection_data(const Rayf &ray,
@@ -229,6 +229,8 @@ struct Object {
     switch (type) {
     case ObjectType::box:
       return box.uv(intersection_point);
+    case ObjectType::sphere:
+      return sphere.uv(intersection_point);
     default:
       return Vec2f{0.0f, 0.0f};
     }
