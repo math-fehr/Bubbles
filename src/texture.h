@@ -13,8 +13,10 @@ struct CheckBoard {
   float n_subdivision;
 
   HD Color get_color(Vec2f uv) const {
-    int a = uv.x * n_subdivision * 2.0f;
-    int b = uv.y * n_subdivision * 2.0f;
+    int a =
+        clamp(uv.x * n_subdivision * 2.0f, 0.1f, n_subdivision * 2.0f - 0.1f);
+    int b =
+        clamp(uv.y * n_subdivision * 2.0f, 0.1f, n_subdivision * 2.0f - 0.1f);
     if ((a + b) % 2) {
       return color1;
     } else {

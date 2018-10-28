@@ -3,6 +3,12 @@
 #include "geom.h"
 #include "texture.h"
 
+struct IntersectionData {
+  Vec3f pos;
+  Vec3f normal;
+  Vec2f uv;
+};
+
 struct Sphere {
   Vec3f center;
   real radius2;
@@ -20,6 +26,15 @@ struct Sphere {
     }
   }
   HD Vec3f normal(Vec3f pos) const { return (center - pos).normalized(); }
+  HD Vec2f uv(Vec3f pos) const {
+    Vec3f d = (center - pos).normalized();
+    return Vec2f{0.5f + atan2f(d.z, d.x) / 2.f * 3.14159f,
+                 0.5f - asinf(d.y) / 3.14159f};
+  }
+  HD IntersectionData intersection_data(const Rayf &ray,
+                                        const Vec3f &pos) const {
+    return IntersectionData{pos, normal(pos), uv(pos)};
+  }
 
   HD bool is_in(Vec3f pos) const { return (pos - center).norm2() < radius2; }
 };
@@ -92,20 +107,17 @@ struct Box {
     return tmin;
   }
 
-  HD Vec3f normal(Rayf ray, Vec3f inter_pos) const {
+  HD Vec3f normal(Rayf ray, Vec3f pos) const {
     int is_interior = (is_in(ray.orig)) ? 1 : 0;
-    real x_0 =
-        !ray.sign[0] ? 1.0f / 0.0f : abs(inter_pos.x - bounds[is_interior].x);
-    real x_1 = ray.sign[0] ? 1.0f / 0.0f
-                           : abs(inter_pos.x - bounds[1 - is_interior].x);
-    real y_0 =
-        !ray.sign[1] ? 1.0f / 0.0f : abs(inter_pos.y - bounds[is_interior].y);
-    real y_1 = ray.sign[1] ? 1.0f / 0.0f
-                           : abs(inter_pos.y - bounds[1 - is_interior].y);
-    real z_0 =
-        !ray.sign[2] ? 1.0f / 0.0f : abs(inter_pos.z - bounds[is_interior].z);
-    real z_1 = ray.sign[2] ? 1.0f / 0.0f
-                           : abs(inter_pos.z - bounds[1 - is_interior].z);
+    real x_0 = !ray.sign[0] ? 1.0f / 0.0f : abs(pos.x - bounds[is_interior].x);
+    real x_1 =
+        ray.sign[0] ? 1.0f / 0.0f : abs(pos.x - bounds[1 - is_interior].x);
+    real y_0 = !ray.sign[1] ? 1.0f / 0.0f : abs(pos.y - bounds[is_interior].y);
+    real y_1 =
+        ray.sign[1] ? 1.0f / 0.0f : abs(pos.y - bounds[1 - is_interior].y);
+    real z_0 = !ray.sign[2] ? 1.0f / 0.0f : abs(pos.z - bounds[is_interior].z);
+    real z_1 =
+        ray.sign[2] ? 1.0f / 0.0f : abs(pos.z - bounds[1 - is_interior].z);
     real mini = min(x_0, min(x_1, min(y_0, min(y_1, min(z_0, z_1)))));
     if (x_0 == mini) {
       return Vec3f{-1.0f, 0.0f, 0.0f};
@@ -140,6 +152,36 @@ struct Box {
       return Vec2f{x_uv, z_uv};
     } else {
       return Vec2f{x_uv, y_uv};
+    }
+  }
+
+  HD IntersectionData intersection_data(const Rayf &ray, Vec3f pos) const {
+    int is_interior = (is_in(ray.orig)) ? 1 : 0;
+    real x_0 = !ray.sign[0] ? 1.0f / 0.0f : abs(pos.x - bounds[is_interior].x);
+    real x_1 =
+        ray.sign[0] ? 1.0f / 0.0f : abs(pos.x - bounds[1 - is_interior].x);
+    real y_0 = !ray.sign[1] ? 1.0f / 0.0f : abs(pos.y - bounds[is_interior].y);
+    real y_1 =
+        ray.sign[1] ? 1.0f / 0.0f : abs(pos.y - bounds[1 - is_interior].y);
+    real z_0 = !ray.sign[2] ? 1.0f / 0.0f : abs(pos.z - bounds[is_interior].z);
+    real z_1 =
+        ray.sign[2] ? 1.0f / 0.0f : abs(pos.z - bounds[1 - is_interior].z);
+    real mini = min(x_0, min(x_1, min(y_0, min(y_1, min(z_0, z_1)))));
+    real x_uv = clamp((bounds[1].x - pos.x) / (bounds[1].x - bounds[0].x));
+    real y_uv = clamp((bounds[1].y - pos.y) / (bounds[1].y - bounds[0].y));
+    real z_uv = clamp((bounds[1].z - pos.z) / (bounds[1].z - bounds[0].z));
+    if (x_0 == mini) {
+      return IntersectionData{pos, Vec3f{-1.0f, 0.0f, 0.0f}, Vec2f{y_uv, z_uv}};
+    } else if (x_1 == mini) {
+      return IntersectionData{pos, Vec3f{1.0f, 0.0f, 0.0f}, Vec2f{y_uv, z_uv}};
+    } else if (y_0 == mini) {
+      return IntersectionData{pos, Vec3f{0.0f, -1.0f, 0.0f}, Vec2f{x_uv, z_uv}};
+    } else if (y_1 == mini) {
+      return IntersectionData{pos, Vec3f{0.0f, 1.0f, 0.0f}, Vec2f{x_uv, z_uv}};
+    } else if (z_0 == mini) {
+      return IntersectionData{pos, Vec3f{0.0f, 0.0f, -1.0f}, Vec2f{x_uv, y_uv}};
+    } else {
+      return IntersectionData{pos, Vec3f{0.0f, 0.0f, 1.0f}, Vec2f{x_uv, y_uv}};
     }
   }
 
@@ -189,6 +231,17 @@ struct Object {
       return box.uv(intersection_point);
     default:
       return Vec2f{0.0f, 0.0f};
+    }
+  }
+
+  HD IntersectionData intersection_data(const Rayf &ray, real distance) const {
+    switch (type) {
+    case ObjectType::sphere:
+      return sphere.intersection_data(ray, ray(distance));
+    case ObjectType::box:
+      return box.intersection_data(ray, ray(distance));
+    default:
+      return {};
     }
   }
 

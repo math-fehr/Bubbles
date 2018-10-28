@@ -19,6 +19,7 @@ struct Intersection {
   real distance;
   Vec3f point;
   Vec3f normal;
+  Vec2f uv;
 };
 
 __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
@@ -34,9 +35,9 @@ __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
     }
   }
 
-  return Intersection{front_object, objects[front_object], intersection_point,
-                      ray(intersection_point),
-                      objects[front_object].normal(ray, intersection_point)};
+  IntersectionData inter_data = objects[front_object].intersection_data(ray, intersection_point);
+
+  return Intersection{front_object, objects[front_object], intersection_point, inter_data.pos, inter_data.normal, inter_data.uv};
 }
 
 __device__ Intersection intersect_all(const Scene &scene, const Rayf &ray) {
@@ -63,8 +64,7 @@ __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
 __device__ Color compute_phong_color(const Scene &scene,
                                      const Intersection &intersection,
                                      Rayf ray) {
-  Vec2f uv = intersection.object.uv(intersection.point);
-  Color point_color = intersection.object.texture.get_color(uv);
+  Color point_color = intersection.object.texture.get_color(intersection.uv);
   Color ambiant_color = point_color * scene.ambiant_light.color *
                         intersection.object.texture.ambiant_factor;
 
