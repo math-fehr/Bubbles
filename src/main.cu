@@ -53,9 +53,10 @@ void add_scene_box(std::vector<Object> &objects) {
 }
 
 void update_camera(Camera &camera, const InteropWindow &win, real time) {
-  real speed = 1.0; // in unit per second
-  real d = speed * time;
+  real speed = 5.0; // in unit per second
   glfwPollEvents();
+  if (glfwGetKey(win.window.get(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed=50.0;
+  real d = speed * time;
   if (glfwGetKey(win.window.get(), GLFW_KEY_W) == GLFW_PRESS) camera.move_front(d);
   if (glfwGetKey(win.window.get(), GLFW_KEY_S) == GLFW_PRESS) camera.move_front(-d);
   if (glfwGetKey(win.window.get(), GLFW_KEY_A) == GLFW_PRESS) camera.move_lat(-d);
@@ -129,6 +130,9 @@ int main(int argc, char *argv[]) {
     camera.rotate_up(-yupd * 0.005);
   };
 
+  double time = glfwGetTime();
+  double lasttime = glfwGetTime();
+
   // Main loop
   while (!glfwWindowShouldClose(interop_window.window.get())) {
     show_fps_and_window_size(interop_window.window.get());
@@ -140,10 +144,15 @@ int main(int argc, char *argv[]) {
     kernel_launcher(interop_window.interop_data.get_current_cuda_array(), scene,
                     camera);
 
-    // Get events
-    update_camera(camera,interop_window,0.1);
+    // Event management
+    time = glfwGetTime();
+    update_camera(camera,interop_window,time - lasttime);
+    lasttime = time;
+
     // update physics, simulation, ...
 
+
+    // Wait for GPU to finish rendering
     cudaDeviceSynchronize();
 
     // Switch buffers
