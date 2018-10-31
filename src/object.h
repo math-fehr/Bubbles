@@ -2,6 +2,7 @@
 
 #include "geom.h"
 #include "texture.h"
+#include <stdio.h>
 
 struct IntersectionData {
   Vec3f pos;
@@ -25,9 +26,9 @@ struct Sphere {
       return pi - sqrt(radius2 - n2);
     }
   }
-  HD Vec3f normal(Vec3f pos) const { return (center - pos).normalized(); }
+  HD Vec3f normal(Vec3f pos) const { return (pos - center).normalized(); }
   HD Vec2f uv(Vec3f pos) const {
-    Vec3f d = (center - pos).normalized();
+    Vec3f d = (pos - center).normalized();
     return Vec2f{0.5f + atan2f(d.z, d.x) / (2.f * 3.14159f),
                  0.5f - asinf(d.y) / 3.14159f};
   }
@@ -188,7 +189,131 @@ struct Box {
   HD bool is_in(Vec3f pos) const { return bounds[0] < pos && pos < bounds[1]; }
 };
 
-enum class ObjectType { sphere, box, plane };
+// orthogonal box
+class Boxv2 {
+  Vec3f center;
+  real radius2;
+  Vec3f xedge, yedge, zedge;
+  real xedge2, yedge2, zedge2;
+  // xedge, yedge, zedge must form an orthogonal basis and represent the mid
+  // length of the Box
+
+  void fix() {
+    Vec3f xunit = xedge.normalized();
+    yedge -= (yedge | xunit) * xunit;
+    // now yedge orthogonal to xedge.
+    Vec3f yunit = yedge.normalized();
+    Vec3f zunit = xunit ^ yunit;
+    zedge = (zedge | zunit) * zunit;
+    xedge2 = xedge.norm2();
+    yedge2 = yedge.norm2();
+    zedge2 = zedge.norm2();
+    radius2 = xedge2 + yedge2 + zedge2;
+  }
+
+public:
+  Boxv2() = default;
+  Boxv2(Vec3f center, Vec3f xedge, Vec3f yedge, Vec3f zedge)
+      : center(center), xedge(xedge), yedge(yedge), zedge(zedge) {
+    fix();
+  }
+
+  HD real inter(Rayf ray) const {
+    Vec3f outbound = ray.orig - center;
+    real raypos = -(ray.dir | outbound);
+    if (outbound.norm2() - raypos * raypos > radius2) return -1;
+    real xdirinv = xedge2 / (xedge | ray.dir);
+    real xdirsign = sign(xdirinv);
+    real ydirinv = yedge2 / (yedge | ray.dir);
+    real ydirsign = sign(ydirinv);
+    real zdirinv = zedge2 / (zedge | ray.dir);
+    real zdirsign = sign(zdirinv);
+    real xorigscal = (xedge | outbound) / xedge2;
+    real yorigscal = (yedge | outbound) / yedge2;
+    real zorigscal = (zedge | outbound) / zedge2;
+
+    real txmin = (-xdirsign - xorigscal) * xdirinv;
+    real txmax = txmin + 2 * xdirinv * xdirsign;
+    real tymin = (-ydirsign - yorigscal) * ydirinv;
+    real tymax = tymin + 2 * ydirinv * ydirsign;
+    real tzmin = (-zdirsign - zorigscal) * zdirinv;
+    real tzmax = tzmin + 2 * zdirinv * zdirsign;
+
+    real tmin = max(txmin, max(tymin, tzmin));
+    real tmax = min(txmax, min(tymax, tzmax));
+
+    // Comment this line to make it work again
+    if (tmin > tmax) return -1;
+
+    if (tmin < 0) {
+      if (tmax < 0) {
+        return -1.0f;
+      }
+      return tmax;
+    }
+
+    return tmin;
+  }
+
+  HD bool is_in(Vec3f point) const {
+    Vec3f out = (point - center);
+    return abs(out | xedge) < xedge2 and abs(out | yedge) < yedge2 and
+           abs(out | zedge) < zedge2;
+  }
+
+  HD IntersectionData intersection_data(const Rayf &ray,
+                                        Vec3f inter_pos) const {
+    real interior = is_in(ray.orig) ? 1.0 : -1.0;
+    Vec3f out = inter_pos - center;
+    real xdist = 1. / 0.;
+    real ydist = 1. / 0.;
+    real zdist = 1. / 0.;
+    constexpr real coeff = .5;
+
+    real xout = out | xedge;
+    real xdirsign = sign(ray.dir | xedge);
+    if (xout > xedge2 * coeff and xdirsign * interior == 1) {
+      xdist = abs(xout - xedge2);
+    } else if (xout < -xedge2 * coeff and xdirsign * interior == -1) {
+      xdist = abs(xout + xedge2);
+    }
+
+    real yout = out | yedge;
+    real ydirsign = sign(ray.dir | yedge);
+    if (yout > yedge2 * coeff and ydirsign * interior == 1) {
+      ydist = abs(yout - yedge2);
+    } else if (yout < -yedge2 * coeff and ydirsign * interior == -1) {
+      ydist = abs(yout + yedge2);
+    }
+
+    real zout = out | zedge;
+    real zdirsign = sign(ray.dir | zedge);
+    if (zout > zedge2 * coeff and zdirsign * interior == 1) {
+      zdist = abs(zout - zedge2);
+    } else if (zout < -zedge2 * coeff and zdirsign * interior == -1) {
+      zdist = abs(zout + zedge2);
+    }
+
+    if (xdist < ydist and xdist < zdist) {
+      return IntersectionData{
+          inter_pos, -xedge.normalized() * xdirsign,
+          Vec2f{0.5f + yout / yedge2 / 2, 0.5f + zout / zedge2 / 2}};
+    } else if (ydist < zdist) {
+      return IntersectionData{
+          inter_pos, -yedge.normalized() * ydirsign,
+          Vec2f{0.5f + xout / xedge2 / 2, 0.5f + zout / zedge2 / 2}};
+    } else {
+      return IntersectionData{
+          inter_pos, -zedge.normalized() * zdirsign,
+          Vec2f{0.5f + xout / xedge2 / 2, 0.5f + yout / yedge2 / 2}};
+    }
+  }
+  HD Vec3f normal(Rayf ray, Vec3f inter_pos) const {
+    return intersection_data(ray, inter_pos).normal;
+  }
+};
+
+enum class ObjectType { sphere, box, plane, box2 };
 
 struct Object {
   Texture texture;
@@ -197,6 +322,7 @@ struct Object {
     Sphere sphere;
     Plane plane;
     Box box;
+    Boxv2 box2;
   };
 
   HD real intersect(Rayf ray) const {
@@ -207,8 +333,10 @@ struct Object {
       return plane.inter(ray);
     case ObjectType::box:
       return box.inter(ray);
+    case ObjectType::box2:
+      return box2.inter(ray);
     default:
-      return -1.0f;
+      return -1.0;
     }
   }
 
@@ -225,23 +353,14 @@ struct Object {
     }
   }
 
-  HD Vec2f uv(Vec3f intersection_point) const {
-    switch (type) {
-    case ObjectType::box:
-      return box.uv(intersection_point);
-    case ObjectType::sphere:
-      return sphere.uv(intersection_point);
-    default:
-      return Vec2f{0.0f, 0.0f};
-    }
-  }
-
   HD IntersectionData intersection_data(const Rayf &ray, real distance) const {
     switch (type) {
     case ObjectType::sphere:
       return sphere.intersection_data(ray, ray(distance));
     case ObjectType::box:
       return box.intersection_data(ray, ray(distance));
+    case ObjectType::box2:
+      return box2.intersection_data(ray, ray(distance));
     default:
       return {};
     }
@@ -251,6 +370,8 @@ struct Object {
     switch (type) {
     case ObjectType::box:
       return box.is_in(point);
+    case ObjectType::box2:
+      return box2.is_in(point);
     case ObjectType::sphere:
       return sphere.is_in(point);
     default:

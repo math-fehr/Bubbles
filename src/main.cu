@@ -39,8 +39,8 @@ void add_scene_box(std::vector<Object> &objects) {
   Object object;
   Texture texture;
   texture.type = TextureType::checkboard;
-  texture.checkboard.color1 = Color{1.0f, 1.0f, 1.0f};
-  texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
+  texture.checkboard.color1 = white;
+  texture.checkboard.color2 = white*0.5;
   texture.checkboard.n_subdivision = 10.0f;
   texture.diffusion_factor = 0.7f;
   texture.ambiant_factor = 0.3f;
@@ -55,13 +55,19 @@ void add_scene_box(std::vector<Object> &objects) {
 void update_camera(Camera &camera, const InteropWindow &win, real time) {
   real speed = 5.0; // in unit per second
   glfwPollEvents();
-  if (glfwGetKey(win.window.get(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed=50.0;
+  if (glfwGetKey(win.window.get(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+    speed = 50.0;
   real d = speed * time;
-  if (glfwGetKey(win.window.get(), GLFW_KEY_W) == GLFW_PRESS) camera.move_front(d);
-  if (glfwGetKey(win.window.get(), GLFW_KEY_S) == GLFW_PRESS) camera.move_front(-d);
-  if (glfwGetKey(win.window.get(), GLFW_KEY_A) == GLFW_PRESS) camera.move_lat(-d);
-  if (glfwGetKey(win.window.get(), GLFW_KEY_D) == GLFW_PRESS) camera.move_lat(d);
-  if (glfwGetKey(win.window.get(), GLFW_KEY_SPACE) == GLFW_PRESS) camera.move_up(d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_W) == GLFW_PRESS)
+    camera.move_front(d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_S) == GLFW_PRESS)
+    camera.move_front(-d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_A) == GLFW_PRESS)
+    camera.move_lat(-d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_D) == GLFW_PRESS)
+    camera.move_lat(d);
+  if (glfwGetKey(win.window.get(), GLFW_KEY_SPACE) == GLFW_PRESS)
+    camera.move_up(d);
   if (glfwGetKey(win.window.get(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
     camera.move_up(-d);
 }
@@ -70,26 +76,9 @@ int main(int argc, char *argv[]) {
 
   std::vector<Object> objects;
   add_scene_box(objects);
-  for (float i = 0.f; i < 19.99f; i += 20.0f) {
-    Vec3f min_pos{i - 10.0f - 1.0f, i - 10.0f - 1.0f, -10.0f - 1.0f};
-    Vec3f max_pos{i - 10.0f + 1.0f, i - 10.0f + 1.0f, -10.0f + 1.0f};
-    Color color{1.0f, 1.0f, 1.0f};
-    Object object;
-    Texture texture;
-    texture.type = TextureType::uniform_color;
-    texture.uniform_color.color = color;
-    texture.diffusion_factor = 0.1f;
-    texture.ambiant_factor = 0.1f;
-    texture.refract_factor = 0.8f;
-    texture.refract_index = 1.33f;
-    object.texture = texture;
-    object.type = ObjectType::box;
-    object.box = Box{min_pos, max_pos};
-    objects.push_back(object);
-  }
 
   Object object;
-  Vec3f pos{10.0f, 10.0f, 10.0f};
+  Vec3f pos{-30,1,0};
   object.texture.type = TextureType::checkboard;
   object.texture.ambiant_factor = 0.4f;
   object.texture.diffusion_factor = 0.6f;
@@ -97,8 +86,36 @@ int main(int argc, char *argv[]) {
   object.texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
   object.texture.checkboard.n_subdivision = 5.0f;
   object.type = ObjectType::sphere;
-  object.sphere = Sphere{pos, 1.0f};
+  object.sphere = Sphere{pos, 0.1f};
   objects.push_back(object);
+
+  pos = Vec3f{-30,-1,0};
+  object.texture.type = TextureType::checkboard;
+  object.texture.ambiant_factor = 0.4f;
+  object.texture.diffusion_factor = 0.6f;
+  object.texture.checkboard.color1 = Color{1.0f, 1.0f, 1.0f};
+  object.texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
+  object.texture.checkboard.n_subdivision = 5.0f;
+  object.type = ObjectType::sphere;
+  object.sphere = Sphere{pos, 0.1};
+  objects.push_back(object);
+
+
+  Texture texture;
+  texture.type = TextureType::checkboard;
+  texture.checkboard.color1 = red;
+  texture.checkboard.color2 = green;
+  texture.checkboard.n_subdivision = 10.0f;
+  texture.diffusion_factor = 0.6f;
+  texture.ambiant_factor = .4f;
+  texture.refract_factor = 0.0f;
+  texture.refract_index = 1.33f;
+  object.texture = texture;
+  object.type = ObjectType::box2;
+  object.box2 = Boxv2(Vec3f{-10,-10,-10},5*X,5*Y,5*Z);
+  objects.push_back(object);
+
+
 
   Object *d_objects = nullptr;
   cuda(Malloc(&d_objects, sizeof(Object) * objects.size()));
@@ -113,8 +130,8 @@ int main(int argc, char *argv[]) {
   unsigned init_width = X_BASE_SIZE;
   unsigned init_height = Y_BASE_SIZE;
 
-  Vec3f camera_pos{0.0f, 0.0f, 20.0f};
-  Vec3f camera_dir{0, 0, -1};
+  Vec3f camera_pos{10.0f, 10.0f, 10.0f};
+  Vec3f camera_dir{1, 1, 1};
   Vec3f camera_up{0, 1, 0};
 
   Camera camera(camera_pos, camera_dir, camera_up, 51.52f * M_PI / 180.0f,
@@ -146,11 +163,10 @@ int main(int argc, char *argv[]) {
 
     // Event management
     time = glfwGetTime();
-    update_camera(camera,interop_window,time - lasttime);
+    update_camera(camera, interop_window, time - lasttime);
     lasttime = time;
 
     // update physics, simulation, ...
-
 
     // Wait for GPU to finish rendering
     cudaDeviceSynchronize();

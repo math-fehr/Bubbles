@@ -55,7 +55,7 @@ else()
   add_definitions(-DVSYNC=0)
 endif()
 
-set(THREADS_PER_BLOCK 512 CACHE INTEGER "The number of threads in a CUDA block")
+set(THREADS_PER_BLOCK 128 CACHE INTEGER "The number of threads in a CUDA block")
 if(THREADS_PER_BLOCK MATCHES "^[0-9]+$")
   add_definitions(-DTHREADS_PER_BLOCK=${THREADS_PER_BLOCK})
 else()

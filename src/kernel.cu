@@ -24,8 +24,10 @@ struct Intersection {
 
 __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
                                       const Rayf &ray) {
+
   int front_object = -1;
   real intersection_point = 1.f / 0.f;
+
 
   for (int i = 0; i < n_objects; ++i) {
     float intersection_i = objects[i].intersect(ray);
@@ -34,10 +36,13 @@ __device__ Intersection intersect_all(Object *objects, unsigned n_objects,
       front_object = i;
     }
   }
+  // TODO handle out of box things : add skybox
 
-  IntersectionData inter_data = objects[front_object].intersection_data(ray, intersection_point);
+  IntersectionData inter_data =
+      objects[front_object].intersection_data(ray, intersection_point);
 
-  return Intersection{front_object, objects[front_object], intersection_point, inter_data.pos, inter_data.normal, inter_data.uv};
+  return Intersection{front_object,   objects[front_object], intersection_point,
+                      inter_data.pos, inter_data.normal,     inter_data.uv};
 }
 
 __device__ Intersection intersect_all(const Scene &scene, const Rayf &ray) {
@@ -79,7 +84,7 @@ __device__ Color compute_phong_color(const Scene &scene,
     real diffusion_factor = -intersection.normal | light_ray.dir;
     diffusion_factor = max(0.0f, min(1.0f, diffusion_factor));
     diffusion_factor *= intersection.object.texture.diffusion_factor;
-    diffuse_color = intersection.object.texture.uniform_color.color *
+    diffuse_color = point_color *
                     diffusion_factor * scene.light.color;
   }
 
@@ -95,7 +100,7 @@ struct BouncingRays {
 __device__ Color compute_texture(const Scene &scene, Intersection intersection,
                                  Rayf ray) {
   // Refraction color
-  if (intersection.object.texture.refract_factor > 0.0f) {
+  if (intersection.object.texture.refract_factor > 0.01f) {
     Rayf refract_ray_out({}, {});
     if (intersection.object.is_in(ray.orig)) {
       bool has_refract = compute_refraction(
@@ -185,27 +190,24 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
 __global__ void kernel(Scene scene, Camera camera) {
   // pixel coordinates
   int idx = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int x_pixel = idx % camera.screen_width;
-  int y_pixel = idx / camera.screen_width;
-
-  Rayf ray = camera.get_ray(x_pixel, y_pixel);
-
-  RGBA rgbx;
-  rgbx.r = 0, rgbx.g = 0, rgbx.b = 0;
-
-  Intersection intersection =
-      intersect_all(scene.objects, scene.n_objects, ray);
-
-  Color color = cast_ray(scene, ray);
-  rgbx = color.to8bit(camera.gamma);
 
   if (idx < camera.screen_height * camera.screen_width) {
+    int x_pixel = idx % camera.screen_width;
+    int y_pixel = idx / camera.screen_width;
+
+    Rayf ray = camera.get_ray(x_pixel, y_pixel);
+
+    Color color = cast_ray(scene, ray);
+
+    RGBA rgbx = color.to8bit(camera.gamma);
+
     surf2Dwrite(rgbx, surf, x_pixel * sizeof(rgbx), y_pixel,
                 cudaBoundaryModeZero);
   }
 }
 
 void kernel_launcher(cudaArray_const_t array, Scene scene, Camera camera) {
+
   cuda(BindSurfaceToArray(surf, array));
 
   const int blocks =

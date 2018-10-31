@@ -18,6 +18,14 @@ inline HD real clamp(real a, real mini = 0, real maxi = 1) {
   return min(maxi, max(mini, a));
 }
 
+inline HD real sign(real a) {
+  return a >= 0 ? 1 : -1;
+}
+
+inline HD real signz(real a) {
+  return a >= 0 ? 1 : 0;
+}
+
 // __     __        ____
 // \ \   / /__  ___|___ \
 //  \ \ / / _ \/ __| __) |
@@ -356,3 +364,9 @@ struct Color {
     return out << "(" << c.r << ", " << c.g << ", " << c.b << ")";
   }
 };
+
+static Color white{1,1,1};
+static Color black{0,0,0};
+static Color red{1,0,0};
+static Color green{0,1,0};
+static Color blue{0,0,1};

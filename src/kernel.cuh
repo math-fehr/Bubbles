@@ -6,7 +6,7 @@
 #include <cuda.h>
 
 struct Scene {
-  Object *objects;
+  Object *objects; // GPU pointer
   unsigned n_objects;
   PointLight light;
   AmbiantLight ambiant_light;
