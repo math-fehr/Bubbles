@@ -38,9 +38,10 @@ static void show_fps_and_window_size(GLFWwindow *window) {
 void add_scene_box(std::vector<Object> &objects) {
   Object object;
   Texture texture;
-  texture.type = TextureType::checkboard;
+  /*texture.type = TextureType::checkboard;
   texture.checkboard.color1 = white;
-  texture.checkboard.color2 = white*0.5;
+  texture.checkboard.color2 = white*0.5;*/
+  texture.type = TextureType::bubble;
   texture.checkboard.n_subdivision = 10.0f;
   texture.diffusion_factor = 0.7f;
   texture.ambiant_factor = 0.3f;
@@ -73,49 +74,20 @@ void update_camera(Camera &camera, const InteropWindow &win, real time) {
 }
 
 int main(int argc, char *argv[]) {
-
   std::vector<Object> objects;
   add_scene_box(objects);
 
+  // The bubbly bubble
   Object object;
-  Vec3f pos{-30,1,0};
-  object.texture.type = TextureType::checkboard;
-  object.texture.ambiant_factor = 0.4f;
-  object.texture.diffusion_factor = 0.6f;
-  object.texture.checkboard.color1 = Color{1.0f, 1.0f, 1.0f};
-  object.texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
-  object.texture.checkboard.n_subdivision = 5.0f;
+  Vec3f pos{10.0f, 10.0f, 10.0f};
+  object.texture.type = TextureType::bubble;
+  object.texture.ambiant_factor = 0.6f;
+  object.texture.diffusion_factor = 0.0f;
+  object.texture.refract_factor = 0.4f;
+  object.texture.refract_index = 1.01f;
   object.type = ObjectType::sphere;
-  object.sphere = Sphere{pos, 0.1f};
+  object.sphere = Sphere{pos, 1.0f};
   objects.push_back(object);
-
-  pos = Vec3f{-30,-1,0};
-  object.texture.type = TextureType::checkboard;
-  object.texture.ambiant_factor = 0.4f;
-  object.texture.diffusion_factor = 0.6f;
-  object.texture.checkboard.color1 = Color{1.0f, 1.0f, 1.0f};
-  object.texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
-  object.texture.checkboard.n_subdivision = 5.0f;
-  object.type = ObjectType::sphere;
-  object.sphere = Sphere{pos, 0.1};
-  objects.push_back(object);
-
-
-  Texture texture;
-  texture.type = TextureType::checkboard;
-  texture.checkboard.color1 = red;
-  texture.checkboard.color2 = green;
-  texture.checkboard.n_subdivision = 10.0f;
-  texture.diffusion_factor = 0.6f;
-  texture.ambiant_factor = .4f;
-  texture.refract_factor = 0.0f;
-  texture.refract_index = 1.33f;
-  object.texture = texture;
-  object.type = ObjectType::box2;
-  object.box2 = Boxv2(Vec3f{-10,-10,-10},5*X,5*Y,5*Z);
-  objects.push_back(object);
-
-
 
   Object *d_objects = nullptr;
   cuda(Malloc(&d_objects, sizeof(Object) * objects.size()));
@@ -143,8 +115,8 @@ int main(int argc, char *argv[]) {
 
   interop_window.cursor_callback = [&camera](GLFWwindow *, double xupd,
                                              double yupd) {
-    camera.rotate_lat(xupd * 0.005);
-    camera.rotate_up(-yupd * 0.005);
+    camera.rotate_lat(xupd * 0.0005);
+    camera.rotate_up(-yupd * 0.0005);
   };
 
   double time = glfwGetTime();

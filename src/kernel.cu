@@ -69,7 +69,8 @@ __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
 __device__ Color compute_phong_color(const Scene &scene,
                                      const Intersection &intersection,
                                      Rayf ray) {
-  Color point_color = intersection.object.texture.get_color(intersection.uv);
+  Color point_color = intersection.object.texture.get_color(intersection.point,
+                                                            intersection.uv);
   Color ambiant_color = point_color * scene.ambiant_light.color *
                         intersection.object.texture.ambiant_factor;
 

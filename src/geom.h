@@ -17,6 +17,11 @@ using real = float;
 inline HD real clamp(real a, real mini = 0, real maxi = 1) {
   return min(maxi, max(mini, a));
 }
+inline HD real fracf(real a) { return a - floorf(a); }
+inline HD real mix(real a, real b, real f) { return a * (1.f - f) + b * f; }
+inline HD real smoothstep(real a, real b, real f) {
+  return mix(a, b, f * f * (3.0f - 2.0f * f));
+}
 
 inline HD real sign(real a) {
   return a >= 0 ? 1 : -1;
@@ -44,6 +49,11 @@ template <class T> struct Vec2 {
     y -= o.y;
     return *this;
   }
+  HD Vec2 &operator-=(real o) {
+    x -= o;
+    y -= o;
+    return *this;
+  }
   HD Vec2 &operator*=(T f) {
     x *= f;
     y *= f;
@@ -56,6 +66,7 @@ template <class T> struct Vec2 {
   }
   HD friend Vec2 operator+(Vec2 v, const Vec2 &v2) { return v += v2; }
   HD friend Vec2 operator-(Vec2 v, const Vec2 &v2) { return v -= v2; }
+  HD friend Vec2 operator-(Vec2 v, real o) { return v -= o; }
   HD friend Vec2 operator*(Vec2 v, float f) { return v *= f; }
   HD friend Vec2 operator*(float f, Vec2 v) { return v *= f; }
   HD friend Vec2 operator/(Vec2 v, float f) { return v /= f; }
@@ -65,6 +76,8 @@ template <class T> struct Vec2 {
   HD T norm() const { return sqrt(norm2()); }
   HD Vec2 &normalize() { return *this /= norm(); }
   HD Vec2 normalized() const { return *this / norm(); }
+  HD Vec2 frac() const { return Vec2{fracf(x), fracf(y)}; }
+  HD Vec2 floor() const { return Vec2{floorf(x), floorf(y)}; }
 
   friend std::ostream &operator<<(std::ostream &out, Vec2 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -87,10 +100,22 @@ template <class T> struct Vec3 {
     z += o.z;
     return *this;
   }
+  HD Vec3 &operator+=(T o) {
+    x += o;
+    y += o;
+    z += o;
+    return *this;
+  }
   HD Vec3 &operator-=(const Vec3 &o) {
     x -= o.x;
     y -= o.y;
     z -= o.z;
+    return *this;
+  }
+  HD Vec3 &operator-=(real o) {
+    x -= o;
+    y -= o;
+    z -= o;
     return *this;
   }
   HD Vec3 &operator*=(T f) {
@@ -106,11 +131,13 @@ template <class T> struct Vec3 {
     return *this;
   }
   HD Vec3 operator-() const { return Vec3{-x, -y, -z}; }
+  HD Vec3 operator-(real r) const { return Vec3{x - r, y - r, z - r}; }
   HD friend Vec3 operator+(Vec3 v, const Vec3 &v2) { return v += v2; }
+  HD friend Vec3 operator+(Vec3 v, T f) { return v += f; }
   HD friend Vec3 operator-(Vec3 v, const Vec3 &v2) { return v -= v2; }
-  HD friend Vec3 operator*(Vec3 v, float f) { return v *= f; }
+  HD friend Vec3 operator*(Vec3 v, T f) { return v *= f; }
   HD friend Vec3 operator*(float f, Vec3 v) { return v *= f; }
-  HD friend Vec3 operator/(Vec3 v, float f) { return v /= f; }
+  HD friend Vec3 operator/(Vec3 v, T f) { return v /= f; }
 
   HD bool operator<(Vec3 v) const { return x < v.x && y < v.y && z < v.z; }
   HD bool operator>(Vec3 v) const { return x > v.x && y > v.y && z > v.z; }
@@ -125,7 +152,15 @@ template <class T> struct Vec3 {
   HD T norm() const { return sqrt(norm2()); }
   HD Vec3 &normalize() { return *this /= norm(); }
   HD Vec3 normalized() const { return *this / norm(); }
-
+  HD Vec3 sin() const { return Vec3{sinf(x), sinf(y), sinf(z)}; }
+  HD Vec3 frac() const { return Vec3{fracf(x), fracf(y), fracf(z)}; }
+  HD Vec3 floor() const { return Vec3{floorf(x), floorf(y), floorf(z)}; }
+  HD Vec3 abs() const { return Vec3{::abs(x), ::abs(y), ::abs(z)}; }
+  HD Vec3 clamp(real mini = 0.0, real maxi = 1.0) {
+    return Vec3{::clamp(x, mini, maxi), ::clamp(y, mini, maxi),
+                ::clamp(z, mini, maxi)};
+  }
+  HD Vec3 mix(Vec3 o, real f) { return *this * (1.0 - f) + o * f; }
   friend std::ostream &operator<<(std::ostream &out, Vec3 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
   }
