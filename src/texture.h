@@ -45,14 +45,44 @@ struct BubbleTexture {
   }
 };
 
+struct Factors {
+  real opacity;
+  real ambiant;
+  real diffuse;
+  real reflect;
+  real refract;
+  real index;
+
+public:
+  static Factors opaque(real diffuse) {
+    Factors factor;
+    factor.opacity = 1;
+    factor.ambiant = 1 - diffuse;
+    factor.diffuse = 1;
+    factor.reflect = 0;
+    factor.refract = 0;
+    factor.index = 1;
+    return factor;
+  }
+  static Factors full(real diffuse, real reflexion, real refraction,
+                      real index) {
+    Factors factor;
+    factor.opacity = 1 - reflexion - refraction;
+    factor.ambiant = 1 - diffuse;
+    factor.diffuse = 1;
+    factor.reflect = reflexion;
+    factor.refract = refraction;
+    factor.index = index;
+    return factor;
+  }
+};
+
 enum class TextureType { uniform_color, checkboard, bubble };
 
 struct Texture {
   TextureType type;
-  real ambiant_factor;
-  real diffusion_factor;
-  real refract_factor = 0.0;
-  real refract_index = 1.0;
+  Factors factors;
+
   union {
     UniformColor uniform_color;
     CheckBoard checkboard;

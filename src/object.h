@@ -32,8 +32,7 @@ struct Sphere {
     return Vec2f{0.5f + atan2f(d.z, d.x) / (2.f * 3.14159f),
                  0.5f - asinf(d.y) / 3.14159f};
   }
-  HD IntersectionData intersection_data(const Rayf &ray,
-                                        const Vec3f &pos) const {
+  HD IntersectionData inter_data(const Rayf &ray, const Vec3f &pos) const {
     return IntersectionData{pos, normal(pos), uv(pos)};
   }
 
@@ -54,12 +53,20 @@ struct Plane {
     }
     return (constant - (ray.orig | normal_vec)) / dot;
   }
+
   HD Vec3f normal(Rayf ray) const {
     if ((ray.orig | normal_vec) < 0) {
       return -normal_vec;
     } else {
       return normal_vec;
     }
+  }
+
+  HD bool is_in(Vec3f pos) const {
+    return (pos | normal_vec) < 0;
+  }
+  HD IntersectionData inter_data(const Rayf &ray, const Vec3f &pos) const {
+    return IntersectionData{pos, normal(ray), Vec2f{0, 0}};
   }
 };
 
@@ -156,7 +163,7 @@ struct Box {
     }
   }
 
-  HD IntersectionData intersection_data(const Rayf &ray, Vec3f pos) const {
+  HD IntersectionData inter_data(const Rayf &ray, Vec3f pos) const {
     int is_interior = (is_in(ray.orig)) ? 1 : 0;
     real x_0 = !ray.sign[0] ? 1.0f / 0.0f : abs(pos.x - bounds[is_interior].x);
     real x_1 =
@@ -261,8 +268,7 @@ public:
            abs(out | zedge) < zedge2;
   }
 
-  HD IntersectionData intersection_data(const Rayf &ray,
-                                        Vec3f inter_pos) const {
+  HD IntersectionData inter_data(const Rayf &ray, Vec3f inter_pos) const {
     real interior = is_in(ray.orig) ? 1.0 : -1.0;
     Vec3f out = inter_pos - center;
     real xdist = 1. / 0.;
@@ -309,7 +315,7 @@ public:
     }
   }
   HD Vec3f normal(Rayf ray, Vec3f inter_pos) const {
-    return intersection_data(ray, inter_pos).normal;
+    return inter_data(ray, inter_pos).normal;
   }
 };
 
@@ -325,7 +331,7 @@ struct Object {
     Boxv2 box2;
   };
 
-  HD real intersect(Rayf ray) const {
+  HD real inter(Rayf ray) const {
     switch (type) {
     case ObjectType::sphere:
       return sphere.inter(ray);
@@ -340,27 +346,29 @@ struct Object {
     }
   }
 
-  HD Vec3f normal(Rayf ray, real intersection_distance) const {
+  HD Vec3f normal(Rayf ray, real distance) const {
     switch (type) {
     case ObjectType::sphere:
-      return sphere.normal(ray(intersection_distance));
+      return sphere.normal(ray(distance));
     case ObjectType::plane:
       return plane.normal(ray);
     case ObjectType::box:
-      return box.normal(ray, ray(intersection_distance));
+      return box.normal(ray, ray(distance));
     default:
       return {0.0f, 0.0f, 0.0f};
     }
   }
 
-  HD IntersectionData intersection_data(const Rayf &ray, real distance) const {
+  HD IntersectionData inter_data(const Rayf &ray, real distance) const {
     switch (type) {
     case ObjectType::sphere:
-      return sphere.intersection_data(ray, ray(distance));
+      return sphere.inter_data(ray, ray(distance));
+    case ObjectType::plane:
+      return plane.inter_data(ray, ray(distance));
     case ObjectType::box:
-      return box.intersection_data(ray, ray(distance));
+      return box.inter_data(ray, ray(distance));
     case ObjectType::box2:
-      return box2.intersection_data(ray, ray(distance));
+      return box2.inter_data(ray, ray(distance));
     default:
       return {};
     }
@@ -370,6 +378,8 @@ struct Object {
     switch (type) {
     case ObjectType::box:
       return box.is_in(point);
+      case ObjectType::plane:
+        return plane.is_in(point);
     case ObjectType::box2:
       return box2.is_in(point);
     case ObjectType::sphere:

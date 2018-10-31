@@ -5,6 +5,11 @@
 #include <ostream>
 
 #define HD __host__ __device__
+#ifdef __CUDA_ARCH__
+#define HDC __constant__
+#else
+#define HDC
+#endif
 
 //                 _
 //  _ __ ___  __ _| |
@@ -168,9 +173,9 @@ template <class T> struct Vec3 {
 
 using Vec3f = Vec3<real>;
 
-static Vec3f X{1, 0, 0};
-static Vec3f Y{0, 1, 0};
-static Vec3f Z{0, 0, 1};
+HDC static Vec3f X{1, 0, 0};
+HDC static Vec3f Y{0, 1, 0};
+HDC static Vec3f Z{0, 0, 1};
 
 //  ____
 // |  _ \ __ _ _   _
@@ -398,10 +403,15 @@ struct Color {
   friend std::ostream &operator<<(std::ostream &out, Color c) {
     return out << "(" << c.r << ", " << c.g << ", " << c.b << ")";
   }
+
+  HD real max() const {
+    return ::max(r,::max(g,b));
+  }
 };
 
-static Color white{1,1,1};
-static Color black{0,0,0};
-static Color red{1,0,0};
-static Color green{0,1,0};
-static Color blue{0,0,1};
+
+HDC static Color white{1,1,1};
+HDC static Color black{0,0,0};
+HDC static Color red{1,0,0};
+HDC static Color green{0,1,0};
+HDC static Color blue{0,0,1};

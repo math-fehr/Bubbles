@@ -43,8 +43,7 @@ void add_scene_box(std::vector<Object> &objects) {
   texture.checkboard.color2 = white*0.5;*/
   texture.type = TextureType::bubble;
   texture.checkboard.n_subdivision = 10.0f;
-  texture.diffusion_factor = 0.7f;
-  texture.ambiant_factor = 0.3f;
+  texture.factors = Factors::opaque(0.7f);
   Vec3f min_pos = Vec3f{-31.0f, -31.0f, -31.0f};
   Vec3f max_pos = Vec3f{31.0f, 31.0f, 31.0f};
   object.texture = texture;
@@ -52,6 +51,21 @@ void add_scene_box(std::vector<Object> &objects) {
   object.box = Box(min_pos, max_pos);
   objects.push_back(object);
 }
+
+void add_mega_scene_box(std::vector<Object> &objects) {
+  Object object;
+  Texture texture;
+  texture.type = TextureType::uniform_color;
+  texture.uniform_color.color = black;
+  texture.factors = Factors::opaque(0.0f);
+  Vec3f min_pos = Vec3f{-3100000.0f, -3100000.0f, -3100000.0f};
+  Vec3f max_pos = Vec3f{3100000.0f, 3100000.0f, 3100000.0f};
+  object.texture = texture;
+  object.type = ObjectType::box;
+  object.box = Box(min_pos, max_pos);
+  objects.push_back(object);
+}
+
 
 void update_camera(Camera &camera, const InteropWindow &win, real time) {
   real speed = 5.0; // in unit per second
@@ -76,17 +90,48 @@ void update_camera(Camera &camera, const InteropWindow &win, real time) {
 int main(int argc, char *argv[]) {
   std::vector<Object> objects;
   add_scene_box(objects);
+  add_mega_scene_box(objects);
 
   // The bubbly bubble
   Object object;
   Vec3f pos{10.0f, 10.0f, 10.0f};
   object.texture.type = TextureType::bubble;
-  object.texture.ambiant_factor = 0.6f;
-  object.texture.diffusion_factor = 0.0f;
-  object.texture.refract_factor = 0.4f;
-  object.texture.refract_index = 1.01f;
+  object.texture.factors = Factors::full(0.0, 0.0, 0.7, 1.01);
   object.type = ObjectType::sphere;
   object.sphere = Sphere{pos, 1.0f};
+  objects.push_back(object);
+
+  pos = Vec3f{-30,1,0};
+  object.texture.type = TextureType::checkboard;
+  object.texture.factors = Factors::opaque(0.6f);
+  object.texture.checkboard.color1 = Color{1.0f, 1.0f, 1.0f};
+  object.texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
+  object.texture.checkboard.n_subdivision = 5.0f;
+  object.type = ObjectType::sphere;
+  object.sphere = Sphere{pos, 0.1f};
+  objects.push_back(object);
+
+  pos = Vec3f{-30,-1,0};
+  object.texture.type = TextureType::checkboard;
+  object.texture.factors = Factors::opaque(0.6f);
+  object.texture.checkboard.color1 = Color{1.0f, 1.0f, 1.0f};
+  object.texture.checkboard.color2 = Color{0.0f, 0.0f, 0.0f};
+  object.texture.checkboard.n_subdivision = 5.0f;
+  object.type = ObjectType::sphere;
+  object.sphere = Sphere{pos, 0.1};
+  objects.push_back(object);
+
+
+  Texture texture;
+  texture.type = TextureType::uniform_color;
+  texture.uniform_color.color = red;
+  texture.factors = Factors::full(0.7, 0.1,0.8,1.5);
+  object.texture = texture;
+  // object.type = ObjectType::box2;
+  // object.box2 = Boxv2(Vec3f{-10,-10,-10},5*X,5*Y,5*Z);
+  object.type = ObjectType::box;
+  object.box = Box{Vec3f{-10,-10,-10},Vec3f{-5,-5,-5}};
+
   objects.push_back(object);
 
   Object *d_objects = nullptr;

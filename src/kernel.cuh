@@ -10,6 +10,8 @@ struct Scene {
   unsigned n_objects;
   PointLight light;
   AmbiantLight ambiant_light;
+  HD Object &operator[](unsigned i) { return objects[i]; }
+  HD const Object &operator[](unsigned i) const { return objects[i]; }
 };
 
 /**
