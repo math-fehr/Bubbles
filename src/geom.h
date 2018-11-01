@@ -78,7 +78,7 @@ template <class T> struct Vec2 {
 
   HD T operator|(const Vec2 &v) const { return x * v.x + y * v.y; }
   HD T norm2() const { return *this | *this; }
-  HD T norm() const { return sqrt(norm2()); }
+  HD T norm() const { return sqrtf(norm2()); }
   HD Vec2 &normalize() { return *this /= norm(); }
   HD Vec2 normalized() const { return *this / norm(); }
   HD Vec2 frac() const { return Vec2{fracf(x), fracf(y)}; }
@@ -154,7 +154,7 @@ template <class T> struct Vec3 {
   }
   HD T operator|(const Vec3 &v) const { return x * v.x + y * v.y + z * v.z; }
   HD T norm2() const { return *this | *this; }
-  HD T norm() const { return sqrt(norm2()); }
+  HD T norm() const { return sqrtf(norm2());}
   HD Vec3 &normalize() { return *this /= norm(); }
   HD Vec3 normalized() const { return *this / norm(); }
   HD Vec3 sin() const { return Vec3{sinf(x), sinf(y), sinf(z)}; }
