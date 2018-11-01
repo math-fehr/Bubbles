@@ -39,8 +39,9 @@ struct CheckBoard {
 
 // Texture for a soap bubble
 struct BubbleTexture {
+  real scale;
   HD Color get_color(Vec3f pos) const {
-    real r = fractal_perlin(pos, 5, 2.0, 0.3);
+    real r = fractal_perlin(pos * scale, 5, 2.0, 0.3);
     return hsv2rgb(Vec3f{r, 1.0, 1.0});
   }
 };

@@ -191,7 +191,7 @@ template <class T> struct Ray {
         sign{dir.x > 0, dir.y > 0, dir.z > 0} {}
   HD T projindex(const Vec3<T> &vec) const { return (vec - orig) | dir; }
   HD Vec3f projpoint(const Vec3<T> &vec) const {
-    return (*this)(proindex(vec));
+    return (*this)(projindex(vec));
   }
 
   HD Vec3<T> operator()(T index) const { return orig + index * dir; }

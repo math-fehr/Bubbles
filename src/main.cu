@@ -119,8 +119,8 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < MAX_NUM_BUBBLES; ++i) {
     objects.push_back(
-        Object(Sphere{Vec3f{2 * (i % 20) - 20.f, 2.f * (i / 20), 10}, 1})
-            .set(Texture(BubbleTexture{})
+        Object(Sphere{Vec3f{2 * (i % 20) - 20.f, 2.f * (i / 20), 10}, 0.2})
+            .set(Texture(BubbleTexture{5.0})
                      .set(Factors::full(0.7, 0.1, 0.8, 1.005))));
 
     objects.back().speed = Vec3f{0, 0, -1};
@@ -210,7 +210,8 @@ int main(int argc, char *argv[]) {
     }
 
     for (int i = bubbles_start; i < objects.size(); ++i) {
-      objects[i].move(objects[i].speed * (time - lasttime));
+      objects[i].move(sqrtf(objects[i].sphere.radius2) * objects[i].speed *
+                      (time - lasttime));
     }
 
     lasttime = time;

@@ -83,7 +83,8 @@ __device__ Color compute_phong_color(const Scene &scene,
     if (distance > 0. and distance < max_distance) {
       // the object is in the light ray.
       // IntersectionData id = scene[i].inter_data(light_ray, distance);
-      light_color *= scene[i].texture.factors.refract * scene[i].texture.factors.refract;
+      light_color *=
+          scene[i].texture.factors.refract * scene[i].texture.factors.refract;
       if (light_color.max() < 1e-3) break;
     }
   }
@@ -128,6 +129,17 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
     // find next intersected object
     Intersection intersection = intersect_scene_full(scene, ray);
     if (intersection.id == -1) continue;
+
+    Vec3f light_proj = ray.projpoint(scene.light.center);
+    real light_dist = (light_proj - scene.light.center).norm();
+    if (light_dist < 0.5f) {
+      real distance_light = (light_proj - ray.orig).norm2();
+      real distance_object = (intersection.pos - ray.orig).norm2();
+      if (distance_light < distance_object) {
+        real factor = 2.0f * (0.5f - light_dist) * (0.5f - light_dist);
+        final_color += filter * scene.light.color * factor;
+      }
+    }
 
     // Compute the ambiant and diffuse color of the object intersected
     const Object &object = scene[intersection.id];
