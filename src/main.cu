@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
   for(int i= 0 ; i < MAX_NUM_BUBBLES ; ++i ){
     objects.push_back(Object(Sphere{Vec3f{2*(i%20)-20.f, 2.f*(i/20), 10}, 1})
                       .set(Texture(BubbleTexture{})
-                           .set(Factors::full(0.7, 0.1, 0.8, 1.01))));
+                           .set(Factors::full(0.7, 0.1, 0.8, 1.005))));
 
     objects.back().speed = Vec3f{0, 0, -1};
   }
@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
     random_device dev;
     normal_distribution<real> dist(0, 0.5);
     real k = 0.1;
-    real bubble_mass = 0.1;
+    real bubble_mass = 1;
 
     for (int i = bubbles_start; i < objects.size(); ++i) {
 

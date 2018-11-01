@@ -43,32 +43,6 @@ __device__ Intersection intersect_scene_full(const Scene &scene, Rayf ray) {
   return Intersection(res, scene[res.id].inter_data(ray, res.distance));
 }
 
-/*__device__ Intersection intersect_all(Object *objects, unsigned n_objects,
-                                      const Rayf &ray) {
-
-  int front_object = -1;
-  real intersection_point = 1.f / 0.f;
-
-  for (int i = 0; i < n_objects; ++i) {
-    float intersection_i = objects[i].intersect(ray);
-    if (intersection_i > 0.f && intersection_i < intersection_point) {
-      intersection_point = intersection_i;
-      front_object = i;
-    }
-  }
-  // TODO handle out of box things : add skybox
-
-  IntersectionData inter_data =
-      objects[front_object].intersection_data(ray, intersection_point);
-
-  return Intersection{front_object,   objects[front_object], intersection_point,
-                      inter_data.pos, inter_data.normal,     inter_data.uv};
-}
-
-__device__ Intersection intersect_all(const Scene &scene, const Rayf &ray) {
-  return intersect_all(scene.objects, scene.n_objects, ray);
-  }*/
-
 __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
                                    real index_in, real index_out,
                                    Rayf *out_ray) {
@@ -96,25 +70,33 @@ __device__ Color compute_phong_color(const Scene &scene,
                                      const Intersection &intersection,
                                      Rayf ray) {
   const Object &obj = scene[intersection.id];
-  Color point_color =
-      obj.texture.get_color(intersection.pos, intersection.uv);
+  Color point_color = obj.texture.get_color(intersection.pos, intersection.uv);
   Color ambiant_color =
       point_color * scene.ambiant_light.color * obj.texture.factors.ambiant;
 
   Rayf light_ray = scene.light.ray_to_point(intersection.pos);
-  IntersectionBase light_intersection = intersect_scene(scene, light_ray);
-  bool light_touch = intersection.id == light_intersection.id and
-                     abs((scene.light.center - intersection.pos).norm() -
-                         light_intersection.distance) < 1e-3;
+  Color light_color = scene.light.color;
+  real max_distance = (scene.light.center - intersection.pos).norm() - 1e-3;
 
-  Color diffuse_color{0.0f, 0.0f, 0.0f};
-  if (light_touch) {
-    // Diffusion color
-    real diffusion_factor = -intersection.normal | light_ray.dir;
-    diffusion_factor = max(0.0f, diffusion_factor);
-    diffusion_factor *= obj.texture.factors.diffuse;
-    diffuse_color = point_color * diffusion_factor * scene.light.color;
+  for (int i = 0; i < scene.n_objects; ++i) {
+    real distance = scene[i].inter(light_ray);
+    if (distance > 0. and distance < max_distance) {
+      // the object is in the light ray.
+      // IntersectionData id = scene[i].inter_data(light_ray, distance);
+      light_color *= scene[i].texture.factors.refract * scene[i].texture.factors.refract;
+      if (light_color.max() < 1e-3) break;
+    }
   }
+
+  IntersectionBase light_intersection = intersect_scene(scene, light_ray);
+  // bool light_touch = intersection.id == light_intersection.id and
+  //                    abs((scene.light.center - intersection.pos).norm() -
+  //                        light_intersection.distance) < 1e-3;
+
+  real diffusion_factor = -intersection.normal | light_ray.dir;
+  diffusion_factor = max(0.0f, diffusion_factor);
+  diffusion_factor *= obj.texture.factors.diffuse;
+  Color diffuse_color = point_color * diffusion_factor * light_color;
 
   return diffuse_color + ambiant_color;
 }
@@ -149,7 +131,8 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
 
     // Compute the ambiant and diffuse color of the object intersected
     const Object &object = scene[intersection.id];
-    Color point_color = object.texture.get_color(intersection.pos,intersection.uv);
+    Color point_color =
+        object.texture.get_color(intersection.pos, intersection.uv);
     Color phong_color = compute_phong_color(scene, intersection, ray);
 
     if (depth >= NUM_REFL) {
