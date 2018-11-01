@@ -14,9 +14,12 @@ struct Sphere {
   Vec3f center;
   real radius2;
   Sphere() = default;
+  HD real sdf(Vec3f pos) const {
+    return (pos - center).norm() - sqrtf(radius2);
+  }
   HD Sphere(Vec3f center, real radius)
       : center(center), radius2(radius * radius) {}
-  HD real inter(const Rayf& ray) const {
+  HD real inter(const Rayf &ray) const {
     real pi = ray.projindex(center);
     Vec3f pn = ray(pi);
     real n2 = (center - pn).norm2();
@@ -24,8 +27,10 @@ struct Sphere {
       return -1;
     } else {
       real d = sqrtf(radius2 - n2);
-      if (pi - d < 0) return pi + d;
-      else return pi - d;
+      if (pi - d < 0)
+        return pi + d;
+      else
+        return pi - d;
     }
   }
   HD Vec3f normal(Rayf ray, Vec3f pos) const {
@@ -41,6 +46,7 @@ struct Sphere {
   }
 
   HD bool is_in(Vec3f pos) const { return (pos - center).norm2() < radius2; }
+  HD void move(Vec3f displ) { center += displ; }
 };
 
 // The plane follows the equation normal_vec | point = constant
@@ -85,6 +91,12 @@ struct Box {
     maxi.z = max(a.z, b.z);
     bounds[0] = mini;
     bounds[1] = maxi;
+  }
+
+  HD real sdf(Vec3f pos) const {
+    Vec3f center = (bounds[0] + bounds[1]) / 2;
+    Vec3f d = (pos - center).abs() - (bounds[1] - bounds[0]) / 2;
+    return min(max(d.x, max(d.y, d.z)), 0.f) + d.clamp(0, 1.f / 0.f).norm();
   }
 
   HD real inter(Rayf ray) const {
@@ -325,6 +337,7 @@ enum class ObjectType { sphere, box, plane, box2 };
 
 struct Object {
   Texture texture;
+  Vec3f speed;
   ObjectType type;
   union {
     Sphere sphere;
@@ -332,6 +345,29 @@ struct Object {
     Box box;
     Boxv2 box2;
   };
+
+  Object() = default;
+
+  Object(Sphere s) : type(ObjectType::sphere), sphere(s) {}
+  Object(Plane p) : type(ObjectType::plane), plane(p) {}
+  Object(Box b) : type(ObjectType::box), box(b) {}
+  Object(Boxv2 b) : type(ObjectType::box2), box2(b) {}
+
+  Object &set(const Texture &tex) {
+    texture = tex;
+    return *this;
+  }
+
+  HD real sdf(Vec3f pos) const {
+    switch (type) {
+    case ObjectType::sphere:
+      return sphere.sdf(pos);
+    case ObjectType::box:
+      return box.sdf(pos);
+    default:
+      return 1.f / 0.f;
+    }
+  }
 
   HD real inter(Rayf ray) const {
     switch (type) {
@@ -351,7 +387,7 @@ struct Object {
   HD Vec3f normal(Rayf ray, real distance) const {
     switch (type) {
     case ObjectType::sphere:
-      return sphere.normal(ray,ray(distance));
+      return sphere.normal(ray, ray(distance));
     case ObjectType::plane:
       return plane.normal(ray);
     case ObjectType::box:
@@ -390,4 +426,25 @@ struct Object {
       return false;
     }
   }
+
+  HD void move(Vec3f displ) {
+    switch (type) {
+    case ObjectType::sphere:
+      return sphere.move(displ);
+    default:
+      return;
+    }
+  }
+
+  HD Vec3f pos() {
+    switch (type) {
+      case ObjectType::sphere:
+        return sphere.center;
+      case ObjectType::box:
+        return (box.bounds[0] + box.bounds[1])/2;
+      default:
+        return Vec3f{0,0,0};
+    }
+  }
+
 };

@@ -88,6 +88,15 @@ struct Texture {
     CheckBoard checkboard;
     BubbleTexture bubble;
   };
+  Texture() = default;
+
+  Texture(UniformColor uc) : type(TextureType::uniform_color), uniform_color(uc){}
+  Texture(CheckBoard cb) : type(TextureType::checkboard),checkboard(cb){}
+  Texture(BubbleTexture b) : type(TextureType::bubble),bubble(b){}
+  Texture& set(Factors nfactors){
+    factors = nfactors;
+    return *this;
+  }
 
   HD Color get_color(Vec3f pos, Vec2f uv) const {
     switch (type) {
@@ -104,4 +113,5 @@ struct Texture {
       return Color{0.0f, 0.0f, 0.0f};
     }
   }
+
 };

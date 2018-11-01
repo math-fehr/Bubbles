@@ -68,3 +68,11 @@ if(NUM_REFL MATCHES "^[0-9]+$")
 else()
   message( SEND_ERROR "NUM_REFL must be a unsigned integer")
 endif()
+
+set(MAX_NUM_BUBBLES 40 CACHE INTEGER "The maximum number of bubbles")
+if(MAX_NUM_BUBBLES MATCHES "^[0-9]+$")
+  add_definitions(-DMAX_NUM_BUBBLES=${MAX_NUM_BUBBLES})
+else()
+  message( SEND_ERROR "MAX_NUM_BUBBLES must be a unsigned integer")
+endif()
+
