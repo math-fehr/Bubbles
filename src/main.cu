@@ -112,17 +112,19 @@ int main(int argc, char *argv[]) {
       Object(Box{Vec3f{-10, -10, -10}, Vec3f{-5, -5, -5}})
           .set(Texture(UniformColor{red}).set(Factors::opaque(0.7f))));
 
+  objects.push_back(
+      Object(Pipe{}).set(Texture(UniformColor{red}).set(Factors::opaque(0.8))));
+
   int bubbles_start = objects.size();
 
-
-  for(int i= 0 ; i < MAX_NUM_BUBBLES ; ++i ){
-    objects.push_back(Object(Sphere{Vec3f{2*(i%20)-20.f, 2.f*(i/20), 10}, 1})
-                      .set(Texture(BubbleTexture{})
-                           .set(Factors::full(0.7, 0.1, 0.8, 1.005))));
+  for (int i = 0; i < MAX_NUM_BUBBLES; ++i) {
+    objects.push_back(
+        Object(Sphere{Vec3f{2 * (i % 20) - 20.f, 2.f * (i / 20), 10}, 1})
+            .set(Texture(BubbleTexture{})
+                     .set(Factors::full(0.7, 0.1, 0.8, 1.005))));
 
     objects.back().speed = Vec3f{0, 0, -1};
   }
-
 
   Object *d_objects = nullptr;
   cuda(Malloc(&d_objects, sizeof(Object) * (bubbles_start + MAX_NUM_BUBBLES)));
@@ -209,7 +211,7 @@ int main(int argc, char *argv[]) {
 
     for (int i = bubbles_start; i < objects.size(); ++i) {
       objects[i].move(objects[i].speed * (time - lasttime));
-      }
+    }
 
     lasttime = time;
 

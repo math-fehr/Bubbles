@@ -28,13 +28,9 @@ inline HD real smoothstep(real a, real b, real f) {
   return mix(a, b, f * f * (3.0f - 2.0f * f));
 }
 
-inline HD real sign(real a) {
-  return a >= 0 ? 1 : -1;
-}
+inline HD real sign(real a) { return a >= 0 ? 1 : -1; }
 
-inline HD real signz(real a) {
-  return a >= 0 ? 1 : 0;
-}
+inline HD real signz(real a) { return a >= 0 ? 1 : 0; }
 
 // __     __        ____
 // \ \   / /__  ___|___ \
@@ -83,6 +79,7 @@ template <class T> struct Vec2 {
   HD Vec2 normalized() const { return *this / norm(); }
   HD Vec2 frac() const { return Vec2{fracf(x), fracf(y)}; }
   HD Vec2 floor() const { return Vec2{floorf(x), floorf(y)}; }
+  HD Vec2 abs() const { return Vec2{::abs(x), ::abs(y)}; }
 
   friend std::ostream &operator<<(std::ostream &out, Vec2 v) {
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -154,7 +151,7 @@ template <class T> struct Vec3 {
   }
   HD T operator|(const Vec3 &v) const { return x * v.x + y * v.y + z * v.z; }
   HD T norm2() const { return *this | *this; }
-  HD T norm() const { return sqrtf(norm2());}
+  HD T norm() const { return sqrtf(norm2()); }
   HD Vec3 &normalize() { return *this /= norm(); }
   HD Vec3 normalized() const { return *this / norm(); }
   HD Vec3 sin() const { return Vec3{sinf(x), sinf(y), sinf(z)}; }
@@ -404,14 +401,11 @@ struct Color {
     return out << "(" << c.r << ", " << c.g << ", " << c.b << ")";
   }
 
-  HD real max() const {
-    return ::max(r,::max(g,b));
-  }
+  HD real max() const { return ::max(r, ::max(g, b)); }
 };
 
-
-HDC static Color white{1,1,1};
-HDC static Color black{0,0,0};
-HDC static Color red{1,0,0};
-HDC static Color green{0,1,0};
-HDC static Color blue{0,0,1};
+HDC static Color white{1, 1, 1};
+HDC static Color black{0, 0, 0};
+HDC static Color red{1, 0, 0};
+HDC static Color green{0, 1, 0};
+HDC static Color blue{0, 0, 1};

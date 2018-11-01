@@ -81,7 +81,7 @@ struct Plane {
 struct Box {
   Vec3f bounds[2];
   Box() = default;
-  Box(Vec3f a, Vec3f b) {
+  HD Box(Vec3f a, Vec3f b) {
     Vec3f mini, maxi;
     mini.x = min(a.x, b.x);
     maxi.x = max(a.x, b.x);
@@ -333,7 +333,111 @@ public:
   }
 };
 
-enum class ObjectType { sphere, box, plane, box2 };
+struct Pipe {
+
+  HD real sdf_handle(Vec3f p) const {
+    // p.y -= 0.03f;
+    if (p.x >= 0.0f && p.x < 1.0f) {
+      real a = 1.0f - p.x;
+      p.y += (1.5f - a) * (a * a);
+    } else if (p.x > -1.f && p.x < 0.0f) {
+      real a = p.x + 1.0f;
+      p.y += (1.5f - a) * (a * a);
+    }
+
+    real radius = 0.1f;
+    real start = -0.1f;
+    real end = 1.0f;
+    // bounds distance (x)
+    real db = abs(p.x - (end + start) / 2.0f) - (end - start) / 2.0f;
+    // radius distance (y,z)
+    real dr = Vec2f{(1.f + 2.5f * atan(abs(p.x))) * p.y, p.z}.norm() - radius;
+    dr *= 0.37f;
+    return min(max(db, dr), 0.0f) +
+           Vec2f{max(db, 0.f), max(dr, 0.f)}.norm() * 0.75f;
+  }
+
+  HD real sdf_tube_ball(Vec3f p) const {
+    Vec3f center{-0.1f, -0.425f, 0.0f};
+    real radius = 0.2;
+    return (p - center).norm() - radius;
+  }
+
+  HD real sdf_tube_cylinder(Vec3f p) const {
+    Vec3f center{-0.1f, -0.425f, 0.0f};
+    p = p - center;
+    real start = 0.f;
+    real end = 0.3f;
+    real radius = 0.2f;
+    // bounds distance (y)
+    real db = abs(p.y - (end + start) / 2.0f) - (end - start) / 2.0f;
+    // radius distance (x,z)
+    real dr = Vec2f{p.x, p.z}.norm() - radius;
+    return min(max(db, dr), 0.0f) + Vec2f{max(db, 0.f), max(dr, 0.f)}.norm();
+  }
+
+  HD real sdf_tube_hole(Vec3f p) const {
+    Vec3f center{-0.1f, -0.425f, 0.0f};
+    p = p - center;
+    real start = -0.1f;
+    real end = 0.4f;
+    real radius = 0.12f;
+    // bounds distance (y)
+    real db = abs(p.y - (end + start) / 2.0f) - (end - start) / 2.0f;
+    // radius distance (x,z)
+    real dr = Vec2f{p.x, p.z}.norm() - radius;
+    return min(max(db, dr), 0.0f) + Vec2f{max(db, 0.f), max(dr, 0.f)}.norm();
+  }
+
+  HD real sdf(Vec3f p) const {
+    p += Vec3f{0.0f, 10.0f, 0};
+    real d = min(sdf_tube_ball(p), sdf_tube_cylinder(p));
+    d = max(d, -sdf_tube_hole(p));
+    real d2 = sdf_handle(p);
+    real k = 0.06f;
+    float h = clamp(0.5 + 0.5 * (d2 - d) / k, 0.0, 1.0);
+    return mix(d2, d, h) - k * h * (1.0 - h);
+  }
+
+  HD real inter(const Rayf &ray) const {
+    Vec3f center{0, 10.0f};
+    Box box(-center + Vec3f{-0.3, 0.1, -0.21},
+            -center + Vec3f{1.2, -0.7f, 0.21});
+    real depth = box.inter(ray);
+    if (depth < 0) {
+      return depth;
+    }
+    for (unsigned i = 0; i < 512; ++i) {
+      real dist = sdf(ray(depth));
+      depth += dist;
+      if (dist < 1e-4f) {
+        break;
+      }
+    }
+    if (sdf(ray(depth)) > 1e-3f) {
+      return -1.0f;
+    }
+    return depth;
+  }
+  HD Vec3f normal(const Vec3f &point) const {
+    float epsilon = 1e-5f;
+    float x =
+        sdf(point + Vec3f{epsilon, 0, 0}) - sdf(point - Vec3f{epsilon, 0, 0});
+    float y =
+        sdf(point + Vec3f{0, epsilon, 0}) - sdf(point - Vec3f{0, epsilon, 0});
+    float z =
+        sdf(point + Vec3f{0, 0, epsilon}) - sdf(point - Vec3f{0, 0, epsilon});
+    return Vec3f{x, y, z}.normalized();
+  }
+
+  HD IntersectionData inter_data(const Rayf &ray, Vec3f pos) const {
+    return IntersectionData{pos, normal(pos), Vec2f{0.0, 0.0}};
+  }
+
+  HD bool is_in(const Vec3f &pos) const { return sdf(pos) > 0.0f; }
+};
+
+enum class ObjectType { sphere, box, plane, box2, pipe };
 
 struct Object {
   Texture texture;
@@ -344,6 +448,7 @@ struct Object {
     Plane plane;
     Box box;
     Boxv2 box2;
+    Pipe pipe;
   };
 
   Object() = default;
@@ -352,6 +457,7 @@ struct Object {
   Object(Plane p) : type(ObjectType::plane), plane(p) {}
   Object(Box b) : type(ObjectType::box), box(b) {}
   Object(Boxv2 b) : type(ObjectType::box2), box2(b) {}
+  Object(Pipe p) : type(ObjectType::pipe), pipe(p) {}
 
   Object &set(const Texture &tex) {
     texture = tex;
@@ -379,6 +485,8 @@ struct Object {
       return box.inter(ray);
     case ObjectType::box2:
       return box2.inter(ray);
+    case ObjectType::pipe:
+      return pipe.inter(ray);
     default:
       return -1.0;
     }
@@ -407,6 +515,8 @@ struct Object {
       return box.inter_data(ray, ray(distance));
     case ObjectType::box2:
       return box2.inter_data(ray, ray(distance));
+    case ObjectType::pipe:
+      return pipe.inter_data(ray, ray(distance));
     default:
       return {};
     }
@@ -422,6 +532,8 @@ struct Object {
       return box2.is_in(point);
     case ObjectType::sphere:
       return sphere.is_in(point);
+    case ObjectType::pipe:
+      return pipe.is_in(point);
     default:
       return false;
     }
@@ -438,13 +550,12 @@ struct Object {
 
   HD Vec3f pos() {
     switch (type) {
-      case ObjectType::sphere:
-        return sphere.center;
-      case ObjectType::box:
-        return (box.bounds[0] + box.bounds[1])/2;
-      default:
-        return Vec3f{0,0,0};
+    case ObjectType::sphere:
+      return sphere.center;
+    case ObjectType::box:
+      return (box.bounds[0] + box.bounds[1]) / 2;
+    default:
+      return Vec3f{0, 0, 0};
     }
   }
-
 };
