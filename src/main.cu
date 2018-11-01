@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
           .set(Texture(UniformColor{red}).set(Factors::opaque(0.7f))));
 
   objects.push_back(
-      Object(Pipe{}).set(Texture(UniformColor{red}).set(Factors::opaque(0.8))));
+      Object(Pipe{}).set(Texture(WoodTexture{}).set(Factors::opaque(0.8))));
 
   int bubbles_start = objects.size();
 

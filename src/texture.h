@@ -45,6 +45,14 @@ struct BubbleTexture {
   }
 };
 
+struct WoodTexture {
+  HD Color get_color(Vec3f pos) const {
+    pos.z *= 10;
+    real r = fractal_perlin(pos, 20, 2.0, 0.8);
+    return Color{0.58, 0.37, 0.13} * r;
+  }
+};
+
 struct Factors {
   real opacity;
   real ambiant;
@@ -77,7 +85,7 @@ public:
   }
 };
 
-enum class TextureType { uniform_color, checkboard, bubble };
+enum class TextureType { uniform_color, checkboard, bubble, wood };
 
 struct Texture {
   TextureType type;
@@ -87,13 +95,16 @@ struct Texture {
     UniformColor uniform_color;
     CheckBoard checkboard;
     BubbleTexture bubble;
+    WoodTexture wood;
   };
   Texture() = default;
 
-  Texture(UniformColor uc) : type(TextureType::uniform_color), uniform_color(uc){}
-  Texture(CheckBoard cb) : type(TextureType::checkboard),checkboard(cb){}
-  Texture(BubbleTexture b) : type(TextureType::bubble),bubble(b){}
-  Texture& set(Factors nfactors){
+  Texture(UniformColor uc)
+      : type(TextureType::uniform_color), uniform_color(uc) {}
+  Texture(CheckBoard cb) : type(TextureType::checkboard), checkboard(cb) {}
+  Texture(BubbleTexture b) : type(TextureType::bubble), bubble(b) {}
+  Texture(WoodTexture w) : type(TextureType::wood), wood(w) {}
+  Texture &set(Factors nfactors) {
     factors = nfactors;
     return *this;
   }
@@ -109,9 +120,11 @@ struct Texture {
     case TextureType::bubble: {
       return bubble.get_color(pos);
     }
+    case TextureType::wood: {
+      return wood.get_color(pos);
+    }
     default:
       return Color{0.0f, 0.0f, 0.0f};
     }
   }
-
 };
