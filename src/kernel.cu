@@ -78,28 +78,34 @@ __device__ Color compute_phong_color(const Scene &scene,
   Color light_color = scene.light.color;
   real max_distance = (scene.light.center - intersection.pos).norm() - 1e-3;
 
+  // compute shadow : which amount of light reach the point
   for (int i = 0; i < scene.n_objects; ++i) {
     real distance = scene[i].inter(light_ray);
     if (distance > 0. and distance < max_distance) {
-      // the object is in the light ray.
-      // IntersectionData id = scene[i].inter_data(light_ray, distance);
+      Vec2f uv = scene[i].uv(light_ray, distance);
       light_color *=
-          scene[i].texture.factors.refract * scene[i].texture.factors.refract;
+          scene[i].texture.factors.refract * scene[i].texture.factors.refract *
+          (0.15 * scene[i].texture.get_color(light_ray(distance), uv) +
+           0.85 * white);
       if (light_color.max() < 1e-3) break;
     }
   }
-
-  IntersectionBase light_intersection = intersect_scene(scene, light_ray);
-  // bool light_touch = intersection.id == light_intersection.id and
-  //                    abs((scene.light.center - intersection.pos).norm() -
-  //                        light_intersection.distance) < 1e-3;
 
   real diffusion_factor = -intersection.normal | light_ray.dir;
   diffusion_factor = max(0.0f, diffusion_factor);
   diffusion_factor *= obj.texture.factors.diffuse;
   Color diffuse_color = point_color * diffusion_factor * light_color;
 
-  return diffuse_color + ambiant_color;
+  Vec3f light_refl_dir =
+      light_ray.dir +
+      2 * (-light_ray.dir | intersection.normal) * intersection.normal;
+  real specular_factor = -light_refl_dir | ray.dir;
+  specular_factor = max(0.0f, specular_factor);
+  specular_factor = pow(specular_factor, obj.texture.factors.shininess);
+  specular_factor *= obj.texture.factors.specular;
+  Color specular_color = specular_factor * light_color;
+
+  return specular_color + diffuse_color + ambiant_color;
 }
 
 __device__ Color cast_ray(const Scene &scene, Rayf ray) {

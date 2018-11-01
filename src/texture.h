@@ -58,27 +58,33 @@ struct Factors {
   real opacity;
   real ambiant;
   real diffuse;
+  real specular;
+  real shininess;
   real reflect;
   real refract;
   real index;
 
 public:
-  static Factors opaque(real diffuse) {
+  static Factors opaque(real diffuse, real specular = 0.0, real shininess = 1.0) {
     Factors factor;
     factor.opacity = 1;
     factor.ambiant = 1 - diffuse;
-    factor.diffuse = 1;
+    factor.diffuse = diffuse;
+    factor.specular = specular;
+    factor.shininess = shininess;
     factor.reflect = 0;
     factor.refract = 0;
     factor.index = 1;
     return factor;
   }
-  static Factors full(real diffuse, real reflexion, real refraction,
+  static Factors full(real diffuse, real specular, real shininess, real reflexion, real refraction,
                       real index) {
     Factors factor;
     factor.opacity = 1 - reflexion - refraction;
     factor.ambiant = 1 - diffuse;
-    factor.diffuse = 1;
+    factor.diffuse = diffuse;
+    factor.specular = specular;
+    factor.shininess = shininess;
     factor.reflect = reflexion;
     factor.refract = refraction;
     factor.index = index;

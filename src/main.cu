@@ -110,7 +110,9 @@ int main(int argc, char *argv[]) {
 
   objects.push_back(
       Object(Box{Vec3f{-10, -10, -10}, Vec3f{-5, -5, -5}})
-          .set(Texture(UniformColor{red}).set(Factors::opaque(0.7f))));
+          .set(Texture(UniformColor{red}).set(Factors::opaque(0.7f, 0.5, 5))));
+
+  // metal shininess 1000, specular 0.5
 
   objects.push_back(Object(Pipe{Vec3f{0.f, -10.f, 0.f}})
                         .set(Texture(WoodTexture{}).set(Factors::opaque(0.8))));
@@ -119,9 +121,9 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < MAX_NUM_BUBBLES; ++i) {
     objects.push_back(
-        Object(Sphere{Vec3f{2 * (i % 20) - 20.f, 2.f * (i / 20), 10}, 0.2})
+        Object(Bubble{Vec3f{2 * (i % 20) - 20.f, 2.f * (i / 20), 10}, 0.2, 0.1})
             .set(Texture(BubbleTexture{5.0})
-                     .set(Factors::full(0.7, 0.1, 0.8, 1.005))));
+                     .set(Factors::full(0.6, 20, 500, 0.1, 0.8, 1.005))));
 
     objects.back().speed = Vec3f{0, 0, -1};
   }

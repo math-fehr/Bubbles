@@ -49,6 +49,59 @@ struct Sphere {
   HD void move(Vec3f displ) { center += displ; }
 };
 
+struct Bubble {
+  Vec3f center;
+  real radius;
+  real radius2;
+  real noise_ampl;
+  Bubble() = default;
+  // HD real sdf(Vec3f pos) const {
+  //   return (pos - center).norm() - sqrtf(radius2);
+  // }
+  HD real sdf(Vec3f pos) const {
+    Vec3f out = pos - center;
+    real noise = perlin(out.normalized() + center) + 1.f;
+    return out.norm() - radius + noise_ampl * noise;
+  }
+  HD Bubble(Vec3f center, real radius, real noise_ampl)
+      : center(center), radius(radius), radius2(radius * radius),
+        noise_ampl(noise_ampl) {}
+
+  HD real inter(const Rayf &ray) const {
+    real pi = ray.projindex(center);
+    Vec3f pn = ray(pi);
+    real n2 = (center - pn).norm2();
+    if (n2 > radius2) {
+      return -1;
+    } else {
+      real d = sqrtf(radius2 - n2);
+      if (pi - d < 0)
+        return pi + d;
+      else
+        return pi - d;
+    }
+  }
+  HD Vec3f normal(Rayf ray, Vec3f pos) const {
+    return (is_in(ray.orig) ? -1 : 1) *
+           (pos - center +
+            0.05 * Vec3f{perlin(10 * pos), perlin(10 * pos + X),
+                         perlin(10 * pos + Y)})
+               .normalized();
+  }
+
+  HD Vec2f uv(Vec3f pos) const {
+    Vec3f d = (pos - center).normalized();
+    return Vec2f{0.5f + atan2f(d.z, d.x) / (2.f * 3.14159f),
+                 0.5f - asinf(d.y) / 3.14159f};
+  }
+  HD IntersectionData inter_data(const Rayf &ray, const Vec3f &pos) const {
+    return IntersectionData{pos, normal(ray, pos), uv(pos)};
+  }
+
+  HD bool is_in(Vec3f pos) const { return (pos - center).norm2() < radius2; }
+  HD void move(Vec3f displ) { center += displ; }
+};
+
 // The plane follows the equation normal_vec | point = constant
 struct Plane {
   Vec3f normal_vec;
@@ -399,8 +452,7 @@ struct Pipe {
   }
 
   HD real inter(const Rayf &ray) const {
-    Box box(pos + Vec3f{-0.3, 0.1, -0.21},
-            pos + Vec3f{1.2, -0.7f, 0.21});
+    Box box(pos + Vec3f{-0.3, 0.1, -0.21}, pos + Vec3f{1.2, -0.7f, 0.21});
     real depth = box.inter(ray);
     if (depth < 0) {
       return depth;
@@ -435,7 +487,7 @@ struct Pipe {
   HD bool is_in(const Vec3f &pos) const { return sdf(pos) > 0.0f; }
 };
 
-enum class ObjectType { sphere, box, plane, box2, pipe };
+enum class ObjectType { sphere, bubble, box, plane, box2, pipe };
 
 struct Object {
   Texture texture;
@@ -443,6 +495,7 @@ struct Object {
   ObjectType type;
   union {
     Sphere sphere;
+    Bubble bubble;
     Plane plane;
     Box box;
     Boxv2 box2;
@@ -452,6 +505,7 @@ struct Object {
   Object() = default;
 
   Object(Sphere s) : type(ObjectType::sphere), sphere(s) {}
+  Object(Bubble b) : type(ObjectType::bubble), bubble(b) {}
   Object(Plane p) : type(ObjectType::plane), plane(p) {}
   Object(Box b) : type(ObjectType::box), box(b) {}
   Object(Boxv2 b) : type(ObjectType::box2), box2(b) {}
@@ -466,6 +520,8 @@ struct Object {
     switch (type) {
     case ObjectType::sphere:
       return sphere.sdf(pos);
+    case ObjectType::bubble:
+      return bubble.sdf(pos);
     case ObjectType::box:
       return box.sdf(pos);
     default:
@@ -477,6 +533,8 @@ struct Object {
     switch (type) {
     case ObjectType::sphere:
       return sphere.inter(ray);
+    case ObjectType::bubble:
+      return bubble.inter(ray);
     case ObjectType::plane:
       return plane.inter(ray);
     case ObjectType::box:
@@ -494,12 +552,29 @@ struct Object {
     switch (type) {
     case ObjectType::sphere:
       return sphere.normal(ray, ray(distance));
+    case ObjectType::bubble:
+      return bubble.normal(ray, ray(distance));
     case ObjectType::plane:
       return plane.normal(ray);
     case ObjectType::box:
       return box.normal(ray, ray(distance));
+    case ObjectType::box2:
+      return box2.normal(ray, ray(distance));
     default:
       return {0.0f, 0.0f, 0.0f};
+    }
+  }
+
+  HD Vec2f uv(Rayf ray, real distance) const {
+    switch (type) {
+    case ObjectType::sphere:
+      return sphere.uv(ray(distance));
+    case ObjectType::bubble:
+      return bubble.uv(ray(distance));
+    case ObjectType::box:
+      return box.uv(ray(distance));
+    default:
+      return {0.0f, 0.0f};
     }
   }
 
@@ -507,6 +582,8 @@ struct Object {
     switch (type) {
     case ObjectType::sphere:
       return sphere.inter_data(ray, ray(distance));
+    case ObjectType::bubble:
+      return bubble.inter_data(ray, ray(distance));
     case ObjectType::plane:
       return plane.inter_data(ray, ray(distance));
     case ObjectType::box:
@@ -530,6 +607,8 @@ struct Object {
       return box2.is_in(point);
     case ObjectType::sphere:
       return sphere.is_in(point);
+    case ObjectType::bubble:
+      return bubble.is_in(point);
     case ObjectType::pipe:
       return pipe.is_in(point);
     default:
@@ -541,6 +620,8 @@ struct Object {
     switch (type) {
     case ObjectType::sphere:
       return sphere.move(displ);
+    case ObjectType::bubble:
+      return bubble.move(displ);
     default:
       return;
     }
@@ -550,6 +631,8 @@ struct Object {
     switch (type) {
     case ObjectType::sphere:
       return sphere.center;
+    case ObjectType::bubble:
+      return bubble.center;
     case ObjectType::box:
       return (box.bounds[0] + box.bounds[1]) / 2;
     default:
