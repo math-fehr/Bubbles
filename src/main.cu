@@ -112,8 +112,8 @@ int main(int argc, char *argv[]) {
       Object(Box{Vec3f{-10, -10, -10}, Vec3f{-5, -5, -5}})
           .set(Texture(UniformColor{red}).set(Factors::opaque(0.7f))));
 
-  objects.push_back(
-      Object(Pipe{}).set(Texture(WoodTexture{}).set(Factors::opaque(0.8))));
+  objects.push_back(Object(Pipe{Vec3f{0.f, -10.f, 0.f}})
+                        .set(Texture(WoodTexture{}).set(Factors::opaque(0.8))));
 
   int bubbles_start = objects.size();
 

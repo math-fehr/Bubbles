@@ -334,9 +334,8 @@ public:
 };
 
 struct Pipe {
-
+  Vec3f pos;
   HD real sdf_handle(Vec3f p) const {
-    // p.y -= 0.03f;
     if (p.x >= 0.0f && p.x < 1.0f) {
       real a = 1.0f - p.x;
       p.y += (1.5f - a) * (a * a);
@@ -390,7 +389,7 @@ struct Pipe {
   }
 
   HD real sdf(Vec3f p) const {
-    p += Vec3f{0.0f, 10.0f, 0};
+    p -= pos;
     real d = min(sdf_tube_ball(p), sdf_tube_cylinder(p));
     d = max(d, -sdf_tube_hole(p));
     real d2 = sdf_handle(p);
@@ -400,9 +399,8 @@ struct Pipe {
   }
 
   HD real inter(const Rayf &ray) const {
-    Vec3f center{0, 10.0f};
-    Box box(-center + Vec3f{-0.3, 0.1, -0.21},
-            -center + Vec3f{1.2, -0.7f, 0.21});
+    Box box(pos + Vec3f{-0.3, 0.1, -0.21},
+            pos + Vec3f{1.2, -0.7f, 0.21});
     real depth = box.inter(ray);
     if (depth < 0) {
       return depth;
