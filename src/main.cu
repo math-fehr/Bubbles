@@ -393,9 +393,10 @@ void update_bullet(const InteropWindow &win, const Camera &camera,
       glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT) ==
           GLFW_PRESS) {
     objects->push_back(
-        Object(Sphere(camera.get_pos(), 0.4f))
-            .set(
-                Texture(UniformColor{red}).set(Factors::opaque(0.7f, 0.5, 5))));
+                       Object(Bubble(camera.get_pos(), 0.2, 0.1f))
+                       .set(Texture(BubbleTexture{5.0})
+                            .set(Factors::full(0.6, 20, 500, 0.1, 0.8, 1.005))));
+
   }
   old_left = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT);
 }
