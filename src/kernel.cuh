@@ -12,6 +12,15 @@ struct Scene {
   AmbiantLight ambiant_light;
   HD Object &operator[](unsigned i) { return objects[i]; }
   HD const Object &operator[](unsigned i) const { return objects[i]; }
+
+  Scene& operator=(const Scene& o) {
+    n_objects = o.n_objects;
+    light = o.light;
+    ambiant_light = o.ambiant_light;
+    return *this;
+  }
+
+  Scene(const Scene& o) = default;
 };
 
 /**

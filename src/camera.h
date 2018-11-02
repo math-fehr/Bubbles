@@ -14,14 +14,14 @@ class Camera {
 public:
   unsigned screen_width;  // The screen width in pixel
   unsigned screen_height; // The screen height in pixel
-  real gamma; // gamma color space to render on screen
+  real gamma;             // gamma color space to render on screen
 
   Camera() = delete;
   Camera(Vec3f pos, Vec3f basedir, Vec3f up, real fov, unsigned screen_width,
          unsigned screen_height)
       : pos(pos), basedir(basedir.normalized()), up(up.normalized()), fov(fov),
         scale(tanf(fov * 0.5f)), screen_width(screen_width),
-        screen_height(screen_height) {
+        screen_height(screen_height), gamma(1.5f) {
     update_units();
   }
 
@@ -50,6 +50,13 @@ public:
   void set_fov(real fov) {
     this->fov = fov;
     scale = tanf(fov * 0.5f);
+  }
+
+  void set_pos(Vec3f pos) { this->pos = pos; }
+
+  void set_dir(Vec3f dir) {
+    this->basedir = dir.normalized();
+    update_units();
   }
 
   void move_front(real step) { pos += step * basedir; }

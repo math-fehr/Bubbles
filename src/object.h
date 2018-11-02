@@ -393,6 +393,7 @@ HDC static real pipe_tube_hole_radius = 0.12f;
 
 struct Pipe {
   Vec3f pos;
+  int nb_32steps;
   HD Vec3f pos_hole() const { return pos + pipe_center_tube + Vec3f{0, 0.28}; }
   HD real sdf_handle(Vec3f p) const {
     if (p.x >= 0.0f && p.x < 1.0f) {
@@ -460,7 +461,7 @@ struct Pipe {
     if (depth < 0) {
       return depth;
     }
-    for (unsigned i = 0; i < 512; ++i) {
+    for (unsigned i = 0; i < nb_32steps * 32; ++i) {
       real dist = sdf(ray(depth));
       depth += dist;
       if (dist < 1e-4f) {
@@ -491,7 +492,7 @@ struct Pipe {
 };
 
 namespace {
-  HDC static const real future_bubble_start_radius = 100.0f;
+HDC static const real future_bubble_start_radius = 100.0f;
 }
 
 struct FutureBubble {
