@@ -55,9 +55,6 @@ struct Bubble {
   real radius2;
   real noise_ampl;
   Bubble() = default;
-  // HD real sdf(Vec3f pos) const {
-  //   return (pos - center).norm() - sqrtf(radius2);
-  // }
   HD real sdf(Vec3f pos) const {
     Vec3f out = pos - center;
     real noise = perlin(out.normalized() + center) + 1.f;
@@ -393,9 +390,16 @@ HDC static real pipe_tube_hole_radius = 0.12f;
 
 struct Pipe {
   Vec3f pos;
+  // 32 times the number of maximum raymarching steps
   int nb_32steps;
+
+  // Get the position of the center of the hole, where the bubbles will come out
   HD Vec3f pos_hole() const { return pos + pipe_center_tube + Vec3f{0, 0.28}; }
+
+  // Signed distance function of the handle
   HD real sdf_handle(Vec3f p) const {
+
+    // This is the transformation to have a curved handle
     if (p.x >= 0.0f && p.x < 1.0f) {
       real a = 1.0f - p.x;
       p.y += (1.5f - a) * (a * a);
@@ -410,17 +414,22 @@ struct Pipe {
     // bounds distance (x)
     real db = abs(p.x - (end + start) / 2.0f) - (end - start) / 2.0f;
     // radius distance (y,z)
+    // the distance includes a transformation to have a thinner part for blowing
     real dr = Vec2f{(1.f + 2.5f * atan(abs(p.x))) * p.y, p.z}.norm() - radius;
+    // This factor comes from the first transformation
     dr *= 0.37f;
+    // The 0.75f comes from the second transformation
     return min(max(db, dr), 0.0f) +
            Vec2f{max(db, 0.f), max(dr, 0.f)}.norm() * 0.75f;
   }
 
+  // The balle in the bottom of the out tube
   HD real sdf_tube_ball(Vec3f p) const {
     real radius = 0.2;
     return (p - pipe_center_tube).norm() - radius;
   }
 
+  // The cylinder forming the out tube
   HD real sdf_tube_cylinder(Vec3f p) const {
     p = p - pipe_center_tube;
     real start = 0.f;
@@ -433,6 +442,7 @@ struct Pipe {
     return min(max(db, dr), 0.0f) + Vec2f{max(db, 0.f), max(dr, 0.f)}.norm();
   }
 
+  // The hole of the out tube, where the bubbles will come out
   HD real sdf_tube_hole(Vec3f p) const {
     p = p - pipe_center_tube;
     real start = -0.1f;
@@ -445,10 +455,15 @@ struct Pipe {
     return min(max(db, dr), 0.0f) + Vec2f{max(db, 0.f), max(dr, 0.f)}.norm();
   }
 
+  // The signed distance function of all the pipe
   HD real sdf(Vec3f p) const {
     p -= pos;
+    // The tube without the hole
     real d = min(sdf_tube_ball(p), sdf_tube_cylinder(p));
+    // The tube with the hole
     d = max(d, -sdf_tube_hole(p));
+
+    // A soft union of the handle and the tube
     real d2 = sdf_handle(p);
     real k = 0.06f;
     float h = clamp(0.5 + 0.5 * (d2 - d) / k, 0.0, 1.0);
@@ -495,6 +510,9 @@ namespace {
 HDC static const real future_bubble_start_radius = 100.0f;
 }
 
+// This is a bubble that is forming.
+// It's a sphere, thas is intersected only if the intersection is on the upper
+// size of limit_plane < y
 struct FutureBubble {
   Vec3f center;
   real radius;
@@ -535,6 +553,7 @@ struct FutureBubble {
     return (pos - center).norm2() < radius2 && pos.y > limit_plane;
   }
 
+  // Compute radius of the sphere to touch the bounds of the pipe hole
   HD real compute_radius(Pipe &pipe) {
     return sqrtf((center - pipe.pos_hole()).norm2() +
                  pipe_tube_hole_radius * pipe_tube_hole_radius);

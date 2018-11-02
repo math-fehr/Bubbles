@@ -10,23 +10,30 @@
 
 using namespace std;
 
+// File containing the functions used for ray tracing
+
 // The surface where CUDA will write
+// This is the pixels that will be displayed on screen.
 surface<void, cudaSurfaceType2D> surf;
 
+// Base struct for an intersection
 struct IntersectionBase {
   int id;
   real distance;
 };
 
+// Full information for an intersection.
 struct Intersection : public IntersectionBase, public IntersectionData {
   HD Intersection(IntersectionBase ib, IntersectionData id)
       : IntersectionBase(ib), IntersectionData(id) {}
 };
 
+// Intersect a ray to all the objects in the scene and return the index and
+// distance of the nearest object.
 __device__ IntersectionBase intersect_scene(const Scene &scene, Rayf ray) {
-
   IntersectionBase res{-1, 1.f / 0.f};
 
+  // Intersect all objects and take the nearest one
   for (int i = 0; i < scene.n_objects; ++i) {
     real distance = scene[i].inter(ray);
     if (distance > 0. and distance < res.distance) {
@@ -36,6 +43,8 @@ __device__ IntersectionBase intersect_scene(const Scene &scene, Rayf ray) {
   return res;
 }
 
+// Intersect a ray to all the objects in the scene and return all the
+// information of this object in this point.
 __device__ Intersection intersect_scene_full(const Scene &scene, Rayf ray) {
 
   IntersectionBase res = intersect_scene(scene, ray);
@@ -43,6 +52,8 @@ __device__ Intersection intersect_scene_full(const Scene &scene, Rayf ray) {
   return Intersection(res, scene[res.id].inter_data(ray, res.distance));
 }
 
+
+// Compute the refracting ray of an intersection
 __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
                                    real index_in, real index_out,
                                    Rayf *out_ray) {
@@ -60,12 +71,14 @@ __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
   return true;
 }
 
+// Compute the reflecting ray of an intersection
 __device__ Rayf compute_reflexion(Vec3f incident, Vec3f inter, Vec3f normal) {
   Vec3f refl_dir = incident + 2 * (-incident | normal) * normal;
   inter += 1e-2f * refl_dir;
   return Rayf(inter, refl_dir);
 }
 
+// Compute the phong color of an object
 __device__ Color compute_phong_color(const Scene &scene,
                                      const Intersection &intersection,
                                      Rayf ray) {
@@ -108,6 +121,8 @@ __device__ Color compute_phong_color(const Scene &scene,
   return specular_color + diffuse_color + ambiant_color;
 }
 
+// Cast a ray and get the color associated.
+// The color contains the reflective and refractive part
 __device__ Color cast_ray(const Scene &scene, Rayf ray) {
   Color final_color{0.0f, 0.0f, 0.0f};
   Rayf rays[NUM_REFL * 3 + 1];
@@ -147,7 +162,7 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
       }
     }
 
-    // Compute the ambiant and diffuse color of the object intersected
+    // Phong part
     const Object &object = scene[intersection.id];
     Color point_color =
         object.texture.get_color(intersection.pos, intersection.uv);
@@ -160,11 +175,7 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
 
     real diffuse_power = object.texture.factors.opacity;
 
-    //  ____       __                _   _
-    // |  _ \ ___ / _|_ __ __ _  ___| |_(_) ___  _ __
-    // | |_) / _ \ |_| '__/ _` |/ __| __| |/ _ \| '_ \
-    // |  _ <  __/  _| | | (_| | (__| |_| | (_) | | | |
-    // |_| \_\___|_| |_|  \__,_|\___|\__|_|\___/|_| |_|
+    // Refractive part
 
     if (filter.max() * object.texture.factors.refract < power_cap) {
       diffuse_power += object.texture.factors.refract;
@@ -188,11 +199,7 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
       }
     }
 
-    //  ____       __ _           _
-    // |  _ \ ___ / _| | _____  _(_) ___  _ __
-    // | |_) / _ \ |_| |/ _ \ \/ / |/ _ \| '_ \
-    // |  _ <  __/  _| |  __/>  <| | (_) | | | |
-    // |_| \_\___|_| |_|\___/_/\_\_|\___/|_| |_|
+    // Reflective part
 
     if (filter.max() * object.texture.factors.reflect < power_cap) {
       diffuse_power += object.texture.factors.reflect;
@@ -209,9 +216,8 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
   return final_color;
 }
 
-/**
- * Entry CUDA kernel. This is the code for one pixel
- */
+// Entry CUDA kernel. This is the code for one pixel
+
 __global__ void kernel(Scene scene, Camera camera) {
   // pixel coordinates
   int idx = (blockDim.x * blockIdx.x) + threadIdx.x;
@@ -231,6 +237,7 @@ __global__ void kernel(Scene scene, Camera camera) {
   }
 }
 
+// Launch the kernel by associating each pixel with a thread
 void kernel_launcher(cudaArray_const_t array, Scene scene, Camera camera) {
 
   cuda(BindSurfaceToArray(surf, array));

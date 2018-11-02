@@ -89,5 +89,7 @@ inline HD real fractal_perlin(Vec3f pos, unsigned n_octaves, real omega,
     value += alpha_i * perlin(pos);
     pos = pos * omega;
   }
+  // HACK the normalization is hardcoded
+  // TODO change that
   return ((value / sum_alpha) + 0.2) / 0.4;
 }

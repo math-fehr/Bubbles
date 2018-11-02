@@ -7,6 +7,7 @@
 #include <cuda_gl_interop.h>
 #include <random>
 
+// static variables for the main scences.
 bool create_bubbles = false;
 bool move_bubbles = true;
 bool move_light = false;
@@ -14,6 +15,7 @@ real speed_bubble_grow = 0.1;
 
 using namespace std;
 
+// Show the fps in the title of GLFW window
 static void show_fps_and_window_size(GLFWwindow *window) {
   // fps counter in static variables
   static double previous_time = 0.0;
@@ -41,18 +43,23 @@ static void show_fps_and_window_size(GLFWwindow *window) {
   frame_count++;
 }
 
+// Add a skybox to the list of objects. The skybox is a huge black box.
+// Not adding it might crash the program, since all rays have to intersect to an
+// object.
 void add_skybox(std::vector<Object> *objects) {
   objects->push_back(
       Object(Box(Vec3f{-1e20, -1e20, -1e20}, Vec3f{1e20, 1e20, 1e20}))
           .set(Texture(UniformColor{black}).set(Factors::opaque(0.0f))));
 }
 
+// Add a simple scene box which is a box with checkboard pattern.
 void add_scene_box(std::vector<Object> *objects) {
   objects->push_back(Object(Box(Vec3f{-8, -9, -8}, Vec3f{8, -2, 8}))
                          .set(Texture(CheckBoard{white, white * 0.5, 10})
                                   .set(Factors::opaque(0.7f))));
 }
 
+// Load the scene with a pipe, and bubbles coming out of it.
 void load_final_scene(Scene *scene, std::vector<Object> *objects,
                       Camera *camera) {
   objects->clear();
@@ -77,6 +84,7 @@ void load_final_scene(Scene *scene, std::vector<Object> *objects,
   camera->set_dir(Vec3f{0, -0.3, -1});
 }
 
+// Load the scene containing multiple primitives
 void load_primitives_scene(Scene *scene, std::vector<Object> *objects,
                            Camera *camera) {
   objects->clear();
@@ -123,6 +131,7 @@ void load_primitives_scene(Scene *scene, std::vector<Object> *objects,
   camera->set_dir(Vec3f{0, 0.2, -1});
 }
 
+// Load the scene showing off the phong scene.
 void load_phong_scene(Scene *scene, std::vector<Object> *objects,
                       Camera *camera) {
   objects->clear();
@@ -196,6 +205,8 @@ void load_phong_scene(Scene *scene, std::vector<Object> *objects,
   camera->set_dir(Vec3f{0, 0.2, -1});
 }
 
+// Load the scene containing multiple aligned bubble, to show the importance of
+// ray reflection/refraction depth.
 void load_many_bubbles_scene(Scene *scene, std::vector<Object> *objects,
                              Camera *camera) {
   objects->clear();
@@ -226,6 +237,7 @@ void load_many_bubbles_scene(Scene *scene, std::vector<Object> *objects,
   camera->set_dir(Vec3f{0, 0.2, -1});
 }
 
+// Load the scene containing the different steps made to have a nice bubble
 void load_bubble_scene(Scene *scene, std::vector<Object> *objects,
                        Camera *camera) {
   objects->clear();
@@ -268,6 +280,7 @@ void load_bubble_scene(Scene *scene, std::vector<Object> *objects,
   camera->set_dir(Vec3f{0, 0.2, -1});
 }
 
+// Load the scene containing 4 pipes, with different raymarching maximum steps.
 void load_pipe_scene(Scene *scene, std::vector<Object> *objects,
                      Camera *camera) {
   objects->clear();
@@ -307,6 +320,7 @@ void load_pipe_scene(Scene *scene, std::vector<Object> *objects,
   camera->set_dir(Vec3f{0, 0.2, -1});
 }
 
+// Update the position of the camera relative to the input.
 void update_camera(Camera &camera, const InteropWindow &win, real time) {
   real speed = 5.0; // in unit per second
   glfwPollEvents();
@@ -327,6 +341,7 @@ void update_camera(Camera &camera, const InteropWindow &win, real time) {
     camera.move_up(-d);
 }
 
+// Change the scene if certain buttons are pressed
 void update_scene(const InteropWindow &win, Scene *scene,
                   vector<Object> *objects, Camera *camera) {
   if (glfwGetKey(win.window.get(), GLFW_KEY_T) == GLFW_PRESS)
@@ -343,6 +358,7 @@ void update_scene(const InteropWindow &win, Scene *scene,
     load_pipe_scene(scene, objects, camera);
 }
 
+// Change options if certain buttons are pressed.
 void update_options(const InteropWindow &win, Camera *camera) {
   if (glfwGetKey(win.window.get(), GLFW_KEY_G) == GLFW_PRESS)
     create_bubbles = true;
@@ -365,16 +381,18 @@ void update_options(const InteropWindow &win, Camera *camera) {
     camera->gamma -= 0.1f;
 }
 
+// Update position of light if button X is pressed.
 void update_light(const InteropWindow &win, const Camera &camera,
                   Scene *scene) {
   if (glfwGetKey(win.window.get(), GLFW_KEY_X) == GLFW_PRESS)
     scene->light.center = camera.get_pos();
 }
 
+// Create bubbles / bullets if certain buttons are pressed.
 void update_bullet(const InteropWindow &win, const Camera &camera,
                    vector<Object> *objects) {
   static int old_left = GLFW_RELEASE;
-  if (old_left == GLFW_RELEASE &&
+  if (objects->size() < (MAX_OBJECTS - 1) && old_left == GLFW_RELEASE &&
       glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT) ==
           GLFW_PRESS) {
     objects->push_back(
@@ -389,20 +407,20 @@ void update_bullet(const InteropWindow &win, const Camera &camera,
   old_left = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT);
 
   static int old_right = GLFW_RELEASE;
-  if (old_right == GLFW_RELEASE &&
+  if (objects->size() < (MAX_OBJECTS - 1) && old_right == GLFW_RELEASE &&
       glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_RIGHT) ==
           GLFW_PRESS) {
     objects->push_back(
-                       Object(Bubble(camera.get_pos(), 0.2, 0.1f))
-                       .set(Texture(BubbleTexture{5.0})
-                            .set(Factors::full(0.6, 20, 500, 0.1, 0.8, 1.005))));
-
+        Object(Bubble(camera.get_pos(), 0.2, 0.1f))
+            .set(Texture(BubbleTexture{5.0})
+                     .set(Factors::full(0.6, 20, 500, 0.1, 0.8, 1.005))));
   }
   old_right = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_RIGHT
 
-                                 );
+  );
 }
 
+// Compute the gradient of a signed distance function with central differences.
 Vec3f gradient(const function<real(Vec3f)> &f, Vec3f pos) {
   real eps = 1e-4;
   return Vec3f{(f(pos + eps * X) - f(pos - eps * X)) / (2 * eps),
@@ -411,11 +429,16 @@ Vec3f gradient(const function<real(Vec3f)> &f, Vec3f pos) {
 }
 
 int main(int argc, char *argv[]) {
+  // Create an empty scene
   Scene scene{nullptr, 0, {}, {}};
+
+  // Allocate memory in the gpu for the objects
   cuda(Malloc(&scene.objects, sizeof(Object) * MAX_OBJECTS));
 
+  // Create the window for the program.
   InteropWindow interop_window(X_BASE_SIZE, Y_BASE_SIZE);
 
+  // The vector containing the objects (that will be copied to the GPU).
   std::vector<Object> objects;
 
   // Camera
@@ -425,41 +448,45 @@ int main(int argc, char *argv[]) {
   Camera camera(camera_pos, camera_dir, camera_up, 51.52f * M_PI / 180.0f,
                 X_BASE_SIZE, Y_BASE_SIZE);
 
+  // Load default scene
   load_final_scene(&scene, &objects, &camera);
 
+  // copy scene objects to GPU
   cuda(Memcpy(scene.objects, objects.data(), sizeof(Object) * objects.size(),
               cudaMemcpyHostToDevice));
 
+  // Callback used by the window when moving the cursor.
   interop_window.cursor_callback = [&camera](GLFWwindow *, double xupd,
                                              double yupd) {
     camera.rotate_lat(xupd * 0.0005);
     camera.rotate_up(-yupd * 0.0005);
   };
 
+  // Current time and time of last frame.
   double time = glfwGetTime();
   double lasttime = glfwGetTime();
 
   // Main loop
   while (!glfwWindowShouldClose(interop_window.window.get())) {
+
+    // Update fps
     show_fps_and_window_size(interop_window.window.get());
 
-    // Execute the CUDA code
+    // Get current screen size
     std::tie(camera.screen_width, camera.screen_height) =
         interop_window.interop_data.get_size();
-
+    // Execute the CUDA code in the GPU asynchronously
     kernel_launcher(interop_window.interop_data.get_current_cuda_array(), scene,
                     camera);
 
     // Event management
     time = glfwGetTime();
+    real delta_time = time - lasttime;
     update_camera(camera, interop_window, time - lasttime);
     update_scene(interop_window, &scene, &objects, &camera);
     update_options(interop_window, &camera);
     update_light(interop_window, camera, &scene);
     update_bullet(interop_window, camera, &objects);
-    real delta_time = time - lasttime;
-
-    // update physics, simulation, ...
 
     // update light placing for final scene
     if (move_light) {
@@ -467,12 +494,16 @@ int main(int argc, char *argv[]) {
           Vec3f{cosf(time * 0.2f) * 7.f, -5.0f, sinf(time * 0.2f) * 7.f};
     }
 
-    // update bullet movement
+    // Update bullet movement
+    // Alll spheres with nonzero speed are bullets
     for (int i = 0; i < objects.size(); ++i) {
       if (objects[i].type != ObjectType::sphere) {
         continue;
       }
+      // Move the object relatively to its speed
       objects[i].sphere.move(objects[i].speed * delta_time);
+
+      // If the object is too far away, delete it
       if (abs(objects[i].sphere.center.x) > 30 ||
           abs(objects[i].sphere.center.y) > 30 ||
           abs(objects[i].sphere.center.z) > 30) {
@@ -482,6 +513,7 @@ int main(int argc, char *argv[]) {
       }
       Object temp_object = objects[i];
 
+      // Check for collisions with bubbles
       for (int j = 0; j < objects.size(); j++) {
         if (objects[j].type == ObjectType::bubble) {
           real distance2 =
@@ -497,6 +529,8 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    // Check if there is a pipe in the scene.
+    // If there is multiple pipes, take one arbitrarily
     bool has_pipe = false;
     Pipe pipe;
     for (int j = 0; j < objects.size(); ++j) {
@@ -507,29 +541,42 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Update growing bubble
+    // Update growing bubble in the pipe
     if (move_bubbles && has_pipe) {
       for (int i = 0; i < objects.size(); ++i) {
         if (objects[i].type != ObjectType::future_bubble) {
           continue;
         }
 
+        // Compute the radius of the bubble needed to touch the bounds of the
+        // pipe hole
         FutureBubble &bubble = objects[i].future_bubble;
         real radius = bubble.compute_radius(pipe);
+
+        // If the bubble was already touching the hole:
         if (bubble.touch_hole) {
-          // If we finish growing
+          // If we finished growing, we create a bubble in the same position
           if (radius > bubble.stop_radius && radius > bubble.radius) {
             Bubble new_bubble = bubble.transform();
             objects[i].type = ObjectType::bubble;
             objects[i].bubble = new_bubble;
             objects[i].speed = Vec3f{0, 1, 0};
+
+            // Otherwise, we continue to grow by elevating the center, and
+            // changing the radius accordingly
           } else {
             bubble.center.y += delta_time * speed_bubble_grow;
             bubble.set_radius(radius);
           }
+
+          // If the bubble was not touching the hole, we make the bubble go up
+          // until it touches the hole bounds.
         } else {
           bubble.center.y += delta_time * speed_bubble_grow;
           bubble.limit_plane += delta_time * speed_bubble_grow;
+
+          // The bubble already touched the hole bounds if its radius is greater
+          // than the radius needed to touche the hole bounds
           if (radius < bubble.radius) {
             bubble.touch_hole = true;
             bubble.set_radius(radius);
@@ -539,8 +586,8 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    // Add a new bubble in the pipe if there is no bubble growing
     if (create_bubbles && has_pipe) {
-      // Maybe add a new bubble
       bool has_future_bubble = false;
       for (int i = 0; i < objects.size(); ++i) {
         if (objects[i].type == ObjectType::future_bubble) {
@@ -548,6 +595,8 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
+
+      // Add the bubble only if there is enough space in the buffer
       if (objects.size() < (MAX_OBJECTS - 1) && has_future_bubble == false) {
         objects.push_back(
             Object(FutureBubble(pipe))
@@ -557,8 +606,10 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    // Update position of bubbles.
     if (move_bubbles) {
-      // Update bubbles
+
+      // Random generator for force noise
       random_device dev;
       normal_distribution<real> dist(0, 0.5);
       real k = 0.1;
@@ -569,12 +620,20 @@ int main(int argc, char *argv[]) {
           continue;
         }
 
+        // Compute the direction and intensity of the force applied to the
+        // bubble. The forst is exponentially greater when the bubble is near an
+        // object.
         Vec3f grad{0, 0, 0};
+        // Get the gradient of the scene box distance function
         grad += -gradient(
             [&](Vec3f p) {
+              // HACK 1 is always the scene box
+              // TODO should not hardcode it
               return exp(sqrtf(objects[i].sphere.radius2) + objects[1].sdf(p));
             },
             objects[i].pos());
+
+        // Add the gradients of the other boxes distance functions
         for (int j = 2; j < objects.size(); ++j) {
           if (j == i) continue;
           grad += -gradient(
@@ -584,18 +643,24 @@ int main(int argc, char *argv[]) {
               },
               objects[i].pos());
         }
+
+        // Add a force to the camera to push the bubbles
         grad += -gradient(
             [&](Vec3f p) { return exp(2 - (p - camera.get_pos()).norm()); },
             objects[i].pos());
 
+        // Compute the force applied to the bubble
         Vec3f force = -k * objects[i].speed +
                       Vec3f{dist(dev), dist(dev), dist(dev)} + grad;
 
+        // Compute the acceleration associated
         Vec3f accel = force / bubble_mass;
 
+        // Add this acceleration to the speed
         objects[i].speed += accel * (time - lasttime);
       }
 
+      // Move the bubbles relatively to their speed
       for (int i = 0; i < objects.size(); ++i) {
         if (objects[i].type == ObjectType::bubble) {
           objects[i].move(sqrtf(objects[i].sphere.radius2) * objects[i].speed *
@@ -604,11 +669,16 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    // Update lasttime
     lasttime = time;
 
+    // Update scene objects size
     scene.n_objects = objects.size();
+
     // Wait for GPU to finish rendering
     cudaDeviceSynchronize();
+
+    // Copy all the objects and their positions to the GPU
     cuda(Memcpy(scene.objects, objects.data(), sizeof(Object) * objects.size(),
                 cudaMemcpyHostToDevice));
 

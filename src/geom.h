@@ -4,6 +4,8 @@
 #include <optional>
 #include <ostream>
 
+// This file contains many functions to manipulate vectors and matrices
+
 #define HD __host__ __device__
 #ifdef __CUDA_ARCH__
 #define HDC __constant__

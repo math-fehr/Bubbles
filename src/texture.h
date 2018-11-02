@@ -54,6 +54,7 @@ struct WoodTexture {
   }
 };
 
+// Structure used for phong / reflexion / refraction factors
 struct Factors {
   real opacity;
   real ambiant;
