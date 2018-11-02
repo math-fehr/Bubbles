@@ -373,9 +373,9 @@ void update_light(const InteropWindow &win, const Camera &camera,
 
 void update_bullet(const InteropWindow &win, const Camera &camera,
                    vector<Object> *objects) {
-  static int old_right = GLFW_RELEASE;
-  if (old_right == GLFW_RELEASE &&
-      glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_RIGHT) ==
+  static int old_left = GLFW_RELEASE;
+  if (old_left == GLFW_RELEASE &&
+      glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT) ==
           GLFW_PRESS) {
     objects->push_back(
         Object(Sphere(camera.get_pos(), 0.01f))
@@ -386,11 +386,11 @@ void update_bullet(const InteropWindow &win, const Camera &camera,
             .dir *
         20;
   }
-  old_right = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_RIGHT);
+  old_left = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT);
 
-  static int old_left = GLFW_RELEASE;
-  if (old_left == GLFW_RELEASE &&
-      glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT) ==
+  static int old_right = GLFW_RELEASE;
+  if (old_right == GLFW_RELEASE &&
+      glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_RIGHT) ==
           GLFW_PRESS) {
     objects->push_back(
                        Object(Bubble(camera.get_pos(), 0.2, 0.1f))
@@ -398,7 +398,9 @@ void update_bullet(const InteropWindow &win, const Camera &camera,
                             .set(Factors::full(0.6, 20, 500, 0.1, 0.8, 1.005))));
 
   }
-  old_left = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT);
+  old_right = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_RIGHT
+
+                                 );
 }
 
 Vec3f gradient(const function<real(Vec3f)> &f, Vec3f pos) {
