@@ -365,6 +365,12 @@ void update_options(const InteropWindow &win, Camera *camera) {
     camera->gamma -= 0.1f;
 }
 
+void update_light(const InteropWindow &win, const Camera &camera,
+                  Scene *scene) {
+  if (glfwGetKey(win.window.get(), GLFW_KEY_X) == GLFW_PRESS)
+    scene->light.center = camera.get_pos();
+}
+
 Vec3f gradient(const function<real(Vec3f)> &f, Vec3f pos) {
   real eps = 1e-4;
   return Vec3f{(f(pos + eps * X) - f(pos - eps * X)) / (2 * eps),
@@ -417,6 +423,7 @@ int main(int argc, char *argv[]) {
     update_camera(camera, interop_window, time - lasttime);
     update_scene(interop_window, &scene, &objects, &camera);
     update_options(interop_window, &camera);
+    update_light(interop_window, camera, &scene);
     real delta_time = time - lasttime;
 
     // update physics, simulation, ...

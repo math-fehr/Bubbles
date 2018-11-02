@@ -87,5 +87,5 @@ public:
     update_units();
   }
 
-  Vec3f get_pos() { return pos; }
+  Vec3f get_pos() const { return pos; }
 };
