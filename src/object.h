@@ -386,8 +386,14 @@ public:
   }
 };
 
+namespace {
+HDC static Vec3f pipe_center_tube{-0.1f, -0.425f, 0.0f};
+HDC static real pipe_tube_hole_radius = 0.12f;
+} // namespace
+
 struct Pipe {
   Vec3f pos;
+  HD Vec3f pos_hole() const { return pos + pipe_center_tube + Vec3f{0, 0.28}; }
   HD real sdf_handle(Vec3f p) const {
     if (p.x >= 0.0f && p.x < 1.0f) {
       real a = 1.0f - p.x;
@@ -410,14 +416,12 @@ struct Pipe {
   }
 
   HD real sdf_tube_ball(Vec3f p) const {
-    Vec3f center{-0.1f, -0.425f, 0.0f};
     real radius = 0.2;
-    return (p - center).norm() - radius;
+    return (p - pipe_center_tube).norm() - radius;
   }
 
   HD real sdf_tube_cylinder(Vec3f p) const {
-    Vec3f center{-0.1f, -0.425f, 0.0f};
-    p = p - center;
+    p = p - pipe_center_tube;
     real start = 0.f;
     real end = 0.3f;
     real radius = 0.2f;
@@ -429,11 +433,10 @@ struct Pipe {
   }
 
   HD real sdf_tube_hole(Vec3f p) const {
-    Vec3f center{-0.1f, -0.425f, 0.0f};
-    p = p - center;
+    p = p - pipe_center_tube;
     real start = -0.1f;
     real end = 0.4f;
-    real radius = 0.12f;
+    real radius = pipe_tube_hole_radius;
     // bounds distance (y)
     real db = abs(p.y - (end + start) / 2.0f) - (end - start) / 2.0f;
     // radius distance (x,z)
@@ -487,7 +490,64 @@ struct Pipe {
   HD bool is_in(const Vec3f &pos) const { return sdf(pos) > 0.0f; }
 };
 
-enum class ObjectType { sphere, bubble, box, plane, box2, pipe };
+namespace {
+  HDC static const real future_bubble_start_radius = 100.0f;
+}
+
+struct FutureBubble {
+  Vec3f center;
+  real radius;
+  real radius2;
+  real limit_plane;
+  real stop_radius;
+  bool touch_hole;
+
+  FutureBubble() = default;
+  HD FutureBubble(Pipe &pipe)
+      : center(pipe.pos_hole() + Vec3f{0, -0.7}), radius(0.4),
+        radius2(radius * radius),
+        limit_plane(center.y + sqrtf(radius2 - pipe_tube_hole_radius *
+                                                   pipe_tube_hole_radius)),
+        stop_radius(0.2), touch_hole(false) {}
+  HD real sdf(Vec3f pos) const {
+    return -1.0; // WARNING : not accurate
+  }
+  HD real inter(const Rayf &ray) const {
+    Sphere sphere(center, radius);
+    real dist = sphere.inter(ray);
+    Vec3f pos = ray(dist);
+    return pos.y < limit_plane ? -1.0f : dist;
+  }
+  HD Vec3f normal(Rayf ray, Vec3f pos) const {
+    return (is_in(ray.orig) ? -1 : 1) * (pos - center).normalized();
+  }
+  HD Vec2f uv(Vec3f pos) const {
+    Vec3f d = (pos - center).normalized();
+    return Vec2f{0.5f + atan2f(d.z, d.x) / (2.f * 3.14159f),
+                 0.5f - asinf(d.y) / 3.14159f};
+  }
+  HD IntersectionData inter_data(const Rayf &ray, const Vec3f &pos) const {
+    return IntersectionData{pos, normal(ray, pos), uv(pos)};
+  }
+
+  HD bool is_in(Vec3f pos) const {
+    return (pos - center).norm2() < radius2 && pos.y > limit_plane;
+  }
+
+  HD real compute_radius(Pipe &pipe) {
+    return sqrtf((center - pipe.pos_hole()).norm2() +
+                 pipe_tube_hole_radius * pipe_tube_hole_radius);
+  }
+
+  HD void set_radius(real radius) {
+    this->radius = radius;
+    radius2 = radius * radius;
+  }
+  HD void set_limit_plane(Pipe &pipe) { limit_plane = pipe.pos_hole().y; }
+  HD Bubble transform() { return Bubble(center, radius, 0.1f); }
+};
+
+enum class ObjectType { sphere, future_bubble, bubble, box, plane, box2, pipe };
 
 struct Object {
   Texture texture;
@@ -500,6 +560,7 @@ struct Object {
     Box box;
     Boxv2 box2;
     Pipe pipe;
+    FutureBubble future_bubble;
   };
 
   Object() = default;
@@ -510,6 +571,7 @@ struct Object {
   Object(Box b) : type(ObjectType::box), box(b) {}
   Object(Boxv2 b) : type(ObjectType::box2), box2(b) {}
   Object(Pipe p) : type(ObjectType::pipe), pipe(p) {}
+  Object(FutureBubble f) : type(ObjectType::future_bubble), future_bubble(f) {}
 
   Object &set(const Texture &tex) {
     texture = tex;
@@ -524,6 +586,8 @@ struct Object {
       return bubble.sdf(pos);
     case ObjectType::box:
       return box.sdf(pos);
+    case ObjectType::future_bubble:
+      return future_bubble.sdf(pos);
     default:
       return 1.f / 0.f;
     }
@@ -543,6 +607,8 @@ struct Object {
       return box2.inter(ray);
     case ObjectType::pipe:
       return pipe.inter(ray);
+    case ObjectType::future_bubble:
+      return future_bubble.inter(ray);
     default:
       return -1.0;
     }
@@ -560,6 +626,8 @@ struct Object {
       return box.normal(ray, ray(distance));
     case ObjectType::box2:
       return box2.normal(ray, ray(distance));
+    case ObjectType::future_bubble:
+      return future_bubble.normal(ray, ray(distance));
     default:
       return {0.0f, 0.0f, 0.0f};
     }
@@ -592,6 +660,8 @@ struct Object {
       return box2.inter_data(ray, ray(distance));
     case ObjectType::pipe:
       return pipe.inter_data(ray, ray(distance));
+    case ObjectType::future_bubble:
+      return future_bubble.inter_data(ray, ray(distance));
     default:
       return {};
     }

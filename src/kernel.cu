@@ -141,7 +141,7 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
     if (light_dist < 0.5f) {
       real distance_light = (light_proj - ray.orig).norm2();
       real distance_object = (intersection.pos - ray.orig).norm2();
-      if (distance_light < distance_object) {
+      if (distance_light < distance_object && distance_light > 0) {
         real factor = 2.0f * (0.5f - light_dist) * (0.5f - light_dist);
         final_color += filter * scene.light.color * factor;
       }

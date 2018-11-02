@@ -95,18 +95,10 @@ Vec3f gradient(const function<real(Vec3f)> &f, Vec3f pos) {
 
 int main(int argc, char *argv[]) {
   std::vector<Object> objects;
+  objects.reserve(100);
 
   add_mega_scene_box(objects);
   add_scene_box(objects);
-  // The bubbly bubble
-
-  objects.push_back(Object(Sphere{Vec3f{-30, 1, 0}, 0.1})
-                        .set(Texture(CheckBoard{white, black, 5.0f})
-                                 .set(Factors::opaque(0.6f))));
-
-  objects.push_back(Object(Sphere{Vec3f{-30, -1, 0}, 0.1})
-                        .set(Texture(CheckBoard{white, black, 5.0f})
-                                 .set(Factors::opaque(0.6f))));
 
   objects.push_back(
       Object(Box{Vec3f{-10, -10, -10}, Vec3f{-5, -5, -5}})
@@ -116,6 +108,10 @@ int main(int argc, char *argv[]) {
 
   objects.push_back(Object(Pipe{Vec3f{0.f, -10.f, 0.f}})
                         .set(Texture(WoodTexture{}).set(Factors::opaque(0.8))));
+
+  objects.push_back(
+      Object(FutureBubble(objects.back().pipe))
+      .set(Texture(BubbleTexture{5.0}).set(Factors::full(0.6, 20, 500, 0.1, 0.8, 1.005))));
 
   int bubbles_start = objects.size();
 
@@ -129,7 +125,7 @@ int main(int argc, char *argv[]) {
   }
 
   Object *d_objects = nullptr;
-  cuda(Malloc(&d_objects, sizeof(Object) * (bubbles_start + MAX_NUM_BUBBLES)));
+  cuda(Malloc(&d_objects, sizeof(Object) * MAX_OBJECTS));
   cuda(Memcpy(d_objects, objects.data(), sizeof(Object) * objects.size(),
               cudaMemcpyHostToDevice));
 
@@ -141,8 +137,8 @@ int main(int argc, char *argv[]) {
   unsigned init_width = X_BASE_SIZE;
   unsigned init_height = Y_BASE_SIZE;
 
-  Vec3f camera_pos{0.0f, 0.0f, 0.0f};
-  Vec3f camera_dir{1, 1, 1};
+  Vec3f camera_pos{3.0f, -10.0f, 0.0f};
+  Vec3f camera_dir{-1.f, 0, 0};
   Vec3f camera_up{0, 1, 0};
 
   Camera camera(camera_pos, camera_dir, camera_up, 51.52f * M_PI / 180.0f,
@@ -175,15 +171,73 @@ int main(int argc, char *argv[]) {
     // Event management
     time = glfwGetTime();
     update_camera(camera, interop_window, time - lasttime);
+    real delta_time = time - lasttime;
 
     // update physics, simulation, ...
 
+    Pipe pipe;
+    for (int j = 0; j < objects.size(); ++j) {
+      if (objects[j].type == ObjectType::pipe) {
+        pipe = objects[j].pipe;
+        break;
+      }
+    }
+
+    // Update growing bubble
+    for (int i = 0; i < objects.size(); ++i) {
+      if (objects[i].type != ObjectType::future_bubble) {
+        continue;
+      }
+
+      FutureBubble &bubble = objects[i].future_bubble;
+      real radius = bubble.compute_radius(pipe);
+      if (bubble.touch_hole) {
+        // If we finish growing
+        if (radius > bubble.stop_radius && radius > bubble.radius) {
+          Bubble new_bubble = bubble.transform();
+          objects[i].type = ObjectType::bubble;
+          objects[i].bubble = new_bubble;
+          objects[i].speed = Vec3f{0,1,0};
+        } else {
+          bubble.center.y += delta_time;
+          bubble.set_radius(radius);
+        }
+      } else {
+        bubble.center.y += delta_time * 0.1;
+        bubble.limit_plane += delta_time * 0.1;
+        if (radius < bubble.radius) {
+          bubble.touch_hole = true;
+          bubble.set_radius(radius);
+          bubble.set_limit_plane(pipe);
+        }
+      }
+    }
+
+    // Maybe add a new bubble
+    bool has_future_bubble = false;
+    for(int i = 0; i < objects.size(); ++i) {
+      if(objects[i].type == ObjectType::future_bubble) {
+        has_future_bubble = true;
+        break;
+      }
+    }
+    if(objects.size() < (MAX_OBJECTS - 1) && has_future_bubble == false) {
+      objects.push_back(Object(FutureBubble(pipe))
+                        .set(Texture(BubbleTexture{5.0}).set(Factors::full(0.6, 20, 500, 0.1, 0.8, 1.005))));
+      scene.n_objects++;
+    }
+
+
+    // Update bubbles
     random_device dev;
     normal_distribution<real> dist(0, 0.5);
     real k = 0.1;
     real bubble_mass = 1;
 
-    for (int i = bubbles_start; i < objects.size(); ++i) {
+    for (int i = 0; i < objects.size(); ++i) {
+      if(objects[i].type != ObjectType::bubble) {
+        continue;
+      }
 
       Vec3f grad{0, 0, 0};
       grad += -gradient(
@@ -211,9 +265,11 @@ int main(int argc, char *argv[]) {
       objects[i].speed += accel * (time - lasttime);
     }
 
-    for (int i = bubbles_start; i < objects.size(); ++i) {
-      objects[i].move(sqrtf(objects[i].sphere.radius2) * objects[i].speed *
-                      (time - lasttime));
+    for (int i = 0; i < objects.size(); ++i) {
+      if(objects[i].type == ObjectType::bubble) {
+        objects[i].move(sqrtf(objects[i].sphere.radius2) * objects[i].speed *
+                        (time - lasttime));
+      }
     }
 
     lasttime = time;
