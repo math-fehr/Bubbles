@@ -371,6 +371,35 @@ void update_light(const InteropWindow &win, const Camera &camera,
     scene->light.center = camera.get_pos();
 }
 
+void update_bullet(const InteropWindow &win, const Camera &camera,
+                   vector<Object> *objects) {
+  static int old_right = GLFW_RELEASE;
+  if (old_right == GLFW_RELEASE &&
+      glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_RIGHT) ==
+          GLFW_PRESS) {
+    objects->push_back(
+        Object(Sphere(camera.get_pos(), 0.01f))
+            .set(
+                Texture(UniformColor{red}).set(Factors::opaque(0.7f, 0.5, 5))));
+    objects->back().speed =
+        camera.get_ray(camera.screen_width * 0.5, camera.screen_height * 0.5)
+            .dir *
+        20;
+  }
+  old_right = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_RIGHT);
+
+  static int old_left = GLFW_RELEASE;
+  if (old_left == GLFW_RELEASE &&
+      glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT) ==
+          GLFW_PRESS) {
+    objects->push_back(
+        Object(Sphere(camera.get_pos(), 0.4f))
+            .set(
+                Texture(UniformColor{red}).set(Factors::opaque(0.7f, 0.5, 5))));
+  }
+  old_left = glfwGetMouseButton(win.window.get(), GLFW_MOUSE_BUTTON_LEFT);
+}
+
 Vec3f gradient(const function<real(Vec3f)> &f, Vec3f pos) {
   real eps = 1e-4;
   return Vec3f{(f(pos + eps * X) - f(pos - eps * X)) / (2 * eps),
@@ -424,6 +453,7 @@ int main(int argc, char *argv[]) {
     update_scene(interop_window, &scene, &objects, &camera);
     update_options(interop_window, &camera);
     update_light(interop_window, camera, &scene);
+    update_bullet(interop_window, camera, &objects);
     real delta_time = time - lasttime;
 
     // update physics, simulation, ...
@@ -432,6 +462,36 @@ int main(int argc, char *argv[]) {
     if (move_light) {
       scene.light.center =
           Vec3f{cosf(time * 0.2f) * 7.f, -5.0f, sinf(time * 0.2f) * 7.f};
+    }
+
+    // update bullet movement
+    for (int i = 0; i < objects.size(); ++i) {
+      if (objects[i].type != ObjectType::sphere) {
+        continue;
+      }
+      objects[i].sphere.move(objects[i].speed * delta_time);
+      if (abs(objects[i].sphere.center.x) > 30 ||
+          abs(objects[i].sphere.center.y) > 30 ||
+          abs(objects[i].sphere.center.z) > 30) {
+        objects.erase(objects.begin() + i);
+        --i;
+        continue;
+      }
+      Object temp_object = objects[i];
+
+      for (int j = 0; j < objects.size(); j++) {
+        if (objects[j].type == ObjectType::bubble) {
+          real distance2 =
+              (objects[i].sphere.center - objects[j].bubble.center).norm2();
+          real radius =
+              sqrtf(objects[i].sphere.radius2) + objects[j].bubble.radius;
+          real radius2 = radius * radius;
+          if (distance2 < radius2) {
+            objects.erase(objects.begin() + j);
+            j--;
+          }
+        }
+      }
     }
 
     bool has_pipe = false;
@@ -543,6 +603,7 @@ int main(int argc, char *argv[]) {
 
     lasttime = time;
 
+    scene.n_objects = objects.size();
     // Wait for GPU to finish rendering
     cudaDeviceSynchronize();
     cuda(Memcpy(scene.objects, objects.data(), sizeof(Object) * objects.size(),

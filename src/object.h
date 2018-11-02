@@ -552,7 +552,7 @@ enum class ObjectType { sphere, future_bubble, bubble, box, plane, box2, pipe };
 
 struct Object {
   Texture texture;
-  Vec3f speed;
+  Vec3f speed = {};
   ObjectType type;
   union {
     Sphere sphere;

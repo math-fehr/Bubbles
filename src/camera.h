@@ -30,7 +30,7 @@ public:
     yunit = (xunit ^ basedir).normalized();
   }
 
-  HD Rayf get_ray(real x_pixel, real y_pixel) {
+  HD Rayf get_ray(real x_pixel, real y_pixel) const {
     real image_aspect_ratio = (real)screen_width / (real)screen_height;
 
     // TODO expand this expression to simple affine function (x - xoff) *
