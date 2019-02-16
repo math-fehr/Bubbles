@@ -1,5 +1,5 @@
 # Bubbles
-Bubbles ? Bubbles !
+Bubbles ? Bubbles ! A small real time ray-tracer/marcher written in CUDA.
 
 This is Thibaut Pérami and Mathieu Fehr project for the M2 class "Computer Graphics and Visualization" in the MPRI.
 
