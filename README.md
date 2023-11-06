@@ -5,7 +5,7 @@ This is Thibaut Pérami and Mathieu Fehr project for the M2 class "Computer Grap
 
 ## Building
 
-You need `cmake` and `cuda` to build the executable.
+You need `cmake`, `cuda`, and `glfw` to build the executable.
 
 `ccmake` can be used to change the compilation parameters (to change the initial size of the window for instance).
 
