@@ -188,8 +188,8 @@ template <class T> struct Ray {
   int sign[3];                // The sign of dir components
   Ray() = default;
   HD Ray(Vec3<T> orig, Vec3<T> dir_)
-      : orig(orig), dir(dir_.normalized()), inv_dir{1.0f / dir.x, 1.0f / dir.y,
-                                                    1.0f / dir.z},
+      : orig(orig), dir(dir_.normalized()),
+        inv_dir{1.0f / dir.x, 1.0f / dir.y, 1.0f / dir.z},
         sign{dir.x > 0, dir.y > 0, dir.z > 0} {}
   HD T projindex(const Vec3<T> &vec) const { return (vec - orig) | dir; }
   HD Vec3f projpoint(const Vec3<T> &vec) const {

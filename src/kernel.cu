@@ -12,10 +12,6 @@ using namespace std;
 
 // File containing the functions used for ray tracing
 
-// The surface where CUDA will write
-// This is the pixels that will be displayed on screen.
-surface<void, cudaSurfaceType2D> surf;
-
 // Base struct for an intersection
 struct IntersectionBase {
   int id;
@@ -51,7 +47,6 @@ __device__ Intersection intersect_scene_full(const Scene &scene, Rayf ray) {
 
   return Intersection(res, scene[res.id].inter_data(ray, res.distance));
 }
-
 
 // Compute the refracting ray of an intersection
 __device__ bool compute_refraction(Vec3f incident, Vec3f inter, Vec3f normal,
@@ -218,7 +213,7 @@ __device__ Color cast_ray(const Scene &scene, Rayf ray) {
 
 // Entry CUDA kernel. This is the code for one pixel
 
-__global__ void kernel(Scene scene, Camera camera) {
+__global__ void kernel(Scene scene, Camera camera, cudaSurfaceObject_t surf) {
   // pixel coordinates
   int idx = (blockDim.x * blockIdx.x) + threadIdx.x;
 
@@ -231,22 +226,31 @@ __global__ void kernel(Scene scene, Camera camera) {
     Color color = cast_ray(scene, ray);
 
     RGBA rgbx = color.to8bit(camera.gamma);
+    uchar4 rgbxchar = {rgbx.r, rgbx.g, rgbx.b, rgbx.a};
 
-    surf2Dwrite(rgbx, surf, x_pixel * sizeof(rgbx), y_pixel,
+    surf2Dwrite(rgbxchar, surf, (int)(x_pixel * sizeof(rgbx)), y_pixel,
                 cudaBoundaryModeZero);
   }
 }
 
 // Launch the kernel by associating each pixel with a thread
 void kernel_launcher(cudaArray_const_t array, Scene scene, Camera camera) {
+  // The surface where CUDA will write
+  // This is the pixels that will be displayed on screen.
+  cudaSurfaceObject_t surf = 0;
 
-  cuda(BindSurfaceToArray(surf, array));
+  struct cudaResourceDesc resDesc;
+  memset(&resDesc, 0, sizeof(resDesc));
+  resDesc.resType = cudaResourceTypeArray;
+  resDesc.res.array.array = (cudaArray_t)array;
+  cuda(CreateSurfaceObject(&surf, &resDesc));
+  // cuda(BindSurfaceToArray(surf, array));
 
   const int blocks =
       (camera.screen_width * camera.screen_height + THREADS_PER_BLOCK - 1) /
       THREADS_PER_BLOCK;
 
   if (blocks > 0) {
-    kernel<<<blocks, THREADS_PER_BLOCK>>>(scene, camera);
+    kernel<<<blocks, THREADS_PER_BLOCK>>>(scene, camera, surf);
   }
 }
